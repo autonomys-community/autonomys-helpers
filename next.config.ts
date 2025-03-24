@@ -7,6 +7,7 @@ const nextConfig = {
     unoptimized: true,
   },
   basePath: isProd ? '/autonomys-helpers' : '',
+  assetPrefix: isProd ? '/autonomys-helpers/' : '',
   trailingSlash: true,
 };
 
