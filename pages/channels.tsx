@@ -2,14 +2,37 @@ import { useEffect, useState } from 'react';
 import { fetchChannels } from '../utils/fetchChannels';
 import ChannelList from '../components/ChannelList';
 
+export interface ChannelEntry {
+  channelId: string;
+  state: string;
+  nextInboxNonce: string;
+  nextOutboxNonce: string;
+  latestResponseReceivedMessageNonce: string;
+  maxOutgoingMessages: string;
+  [key: string]: unknown; // allow extra fields without using `any`
+}
+
 export default function ChannelsPage() {
-  const [channels, setChannels] = useState([]);
+  const [channels, setChannels] = useState<ChannelEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchChannels()
-      .then((data) => {
-        setChannels(data);
+      .then((data: unknown[]) => {
+        const validChannels = data.filter((entry): entry is ChannelEntry => {
+          return (
+            typeof entry === 'object' &&
+            entry !== null &&
+            'channelId' in entry &&
+            'state' in entry &&
+            'nextInboxNonce' in entry &&
+            'nextOutboxNonce' in entry &&
+            'latestResponseReceivedMessageNonce' in entry &&
+            'maxOutgoingMessages' in entry
+          );
+        });
+
+        setChannels(validChannels);
         setLoading(false);
       })
       .catch((error) => {
@@ -22,7 +45,7 @@ export default function ChannelsPage() {
     return <div className="container py-5">Loading channel data...</div>;
   }
 
-  if (!channels || channels.length === 0) {
+  if (!channels.length) {
     return <div className="container py-5">No channel data available.</div>;
   }
 

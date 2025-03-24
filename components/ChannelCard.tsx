@@ -1,19 +1,11 @@
 import { Card, ProgressBar } from 'react-bootstrap';
-
-interface ChannelProps {
-  channelId: string;
-  state: string;
-  nextInboxNonce: string;
-  nextOutboxNonce: string;
-  latestResponseReceivedMessageNonce: string;
-  maxOutgoingMessages: string;
-}
+import { ChannelEntry } from '../pages/channels';
 
 function parseNumber(value: string): number {
   return Number(value.replace(/,/g, '').trim());
 }
 
-export default function ChannelCard(props: ChannelProps) {
+export default function ChannelCard(props: ChannelEntry) {
   const nextInboxNonce = parseNumber(props.nextInboxNonce);
   const nextOutboxNonce = parseNumber(props.nextOutboxNonce);
   const latestResponseNonce = parseNumber(props.latestResponseReceivedMessageNonce);

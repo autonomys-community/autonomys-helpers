@@ -2,7 +2,7 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 
 const WS_ENDPOINT = "wss://rpc-0.taurus.subspace.network/ws";
 
-export async function fetchChannels() {
+export async function fetchChannels(): Promise<unknown[]> {
   try {
     console.log("Connecting to:", WS_ENDPOINT);
     const provider = new WsProvider(WS_ENDPOINT);
@@ -10,11 +10,10 @@ export async function fetchChannels() {
     await api.isReady;
     console.log("Connected to Subspace RPC.");
 
-    // Corrected query with explicit parameter { Domain: 0 }
     const entries = await api.query.messenger.channels.entries({ Domain: 0 });
     console.log(`Raw entries fetched (${entries.length}):`, entries);
 
-    const channels = entries.map(([key, value]) => {
+    const channels = entries.map(([_, value]) => {
       const decoded = value.toHuman();
       console.log("Decoded entry:", decoded);
       return decoded;
@@ -23,7 +22,7 @@ export async function fetchChannels() {
     await api.disconnect();
     console.log("Disconnected from RPC.");
 
-    return channels || [];
+    return channels;
   } catch (error) {
     console.error("Error during fetchChannels:", error);
     return [];

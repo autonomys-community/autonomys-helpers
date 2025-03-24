@@ -1,23 +1,15 @@
 import ChannelCard from './ChannelCard';
-
-interface Channel {
-  channelId: string;
-  state: string;
-  nextInboxNonce: string;
-  nextOutboxNonce: string;
-  latestResponseReceivedMessageNonce: string;
-  maxOutgoingMessages: string;
-}
+import { ChannelEntry } from '../pages/channels';
 
 interface ChannelListProps {
-  channels: Channel[];
+  channels: ChannelEntry[];
 }
 
 export default function ChannelList({ channels }: ChannelListProps) {
   return (
     <>
-      {channels.map((channel) => (
-        <ChannelCard key={channel.channelId} {...channel} />
+      {channels.map((channel, index) => (
+        <ChannelCard key={index} {...channel} />
       ))}
     </>
   );
