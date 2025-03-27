@@ -16,6 +16,10 @@ export interface ChannelEntry {
 const CONSENSUS_ENDPOINT = "wss://rpc-0.taurus.subspace.network/ws";
 const AUTO_EVM_ENDPOINT = "wss://auto-evm.taurus.autonomys.xyz/ws";
 
+function parseNumber(value: string | undefined): number {
+  return Math.max(0, parseInt(value?.replace(/,/g, '') || '0', 10));
+}
+
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +88,7 @@ export default function ChannelsPage() {
       ) : channels.length === 0 ? (
         <div>No channel data available.</div>
       ) : (
-        <ChannelList channels={channels} />
+        <ChannelList channels={channels} parseNumber={parseNumber} />
       )}
     </div>
   );

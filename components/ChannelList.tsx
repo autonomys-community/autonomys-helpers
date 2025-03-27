@@ -4,17 +4,14 @@ import { ChannelEntry } from '../pages/channels';
 
 interface ChannelListProps {
   channels: ChannelEntry[];
+  parseNumber: (val: string | undefined) => number;
 }
 
-const ChannelList: React.FC<ChannelListProps> = ({ channels }) => {
-  if (!channels || channels.length === 0) {
-    return <div>No channel data available.</div>;
-  }
-
+const ChannelList: React.FC<ChannelListProps> = ({ channels, parseNumber }) => {
   return (
     <div>
-      {channels.map((channel, index) => (
-        <ChannelCard key={index} channel={channel} />
+      {channels.map((channel) => (
+        <ChannelCard key={channel.channelId} channel={channel} parseNumber={parseNumber} />
       ))}
     </div>
   );

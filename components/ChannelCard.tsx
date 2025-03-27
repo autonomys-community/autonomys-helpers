@@ -1,47 +1,57 @@
 import React from 'react';
-import Card from 'react-bootstrap/Card';
-import ProgressBar from 'react-bootstrap/ProgressBar';
-import { ChannelEntry } from '../pages/channels';
+import { ProgressBar } from 'react-bootstrap';
+
+interface ChannelEntry {
+  channelId: string;
+  state: string;
+  nextInboxNonce: string;
+  nextOutboxNonce: string;
+  latestResponseReceivedMessageNonce: string;
+  maxOutgoingMessages: string;
+  [key: string]: any;
+}
 
 interface ChannelCardProps {
-  channel?: ChannelEntry | null;
+  channel: ChannelEntry;
+  parseNumber: (val: string | undefined) => number;
 }
 
-function parseNumber(input: string | number | null | undefined): number {
-  if (typeof input === 'number') return input;
-  if (typeof input === 'string') {
-    const sanitized = input.replace(/,/g, '');
-    const parsed = parseInt(sanitized, 10);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  return 0;
-}
+const ChannelCard: React.FC<ChannelCardProps> = ({ channel, parseNumber }) => {
+  const {
+    channelId,
+    state,
+    nextInboxNonce,
+    nextOutboxNonce,
+    latestResponseReceivedMessageNonce,
+    maxOutgoingMessages
+  } = channel;
 
-const ChannelCard: React.FC<ChannelCardProps> = ({ channel }) => {
-  if (!channel) return null;
+  const inbox = parseNumber(nextInboxNonce);
+  const outbox = parseNumber(nextOutboxNonce);
+  const latestResponse = parseNumber(latestResponseReceivedMessageNonce);
+  const capacity = parseNumber(maxOutgoingMessages);
 
-  const channelId = parseNumber(channel.channelId);
-  const inboxNonce = parseNumber(channel.nextInboxNonce) - 1;
-  const outboxNonce = parseNumber(channel.nextOutboxNonce) - 1;
-  const lastResponse = parseNumber(channel.latestResponseReceivedMessageNonce);
-  const pending = Math.max(outboxNonce - lastResponse, 0);
-  const capacity = parseNumber(channel.maxOutgoingMessages);
-  const usagePercent = capacity > 0 ? (pending / capacity) * 100 : 0;
+  const pending = Math.max(0, outbox - 1 - latestResponse);
+  const inbound = Math.max(0, inbox - 1);
+  const outbound = Math.max(0, outbox - 1);
+
+  const percentUtilised = capacity > 0 ? Math.min((pending / capacity) * 100, 100) : 0;
 
   return (
-    <Card className="mb-4">
-      <Card.Body>
-        <Card.Title>Channel #{channelId}</Card.Title>
-        <ul className="list-unstyled mb-3">
-          <li><strong>Status:</strong> {channel.state}</li>
-          <li><strong>Inbound Messages:</strong> {inboxNonce.toLocaleString()}</li>
-          <li><strong>Outbound Messages:</strong> {outboxNonce.toLocaleString()}</li>
-          <li><strong>Pending Messages:</strong> {pending.toLocaleString()}</li>
-          <li><strong>Capacity:</strong> {capacity.toLocaleString()}</li>
-        </ul>
-        <ProgressBar now={usagePercent} label={`${usagePercent.toFixed(0)}%`} />
-      </Card.Body>
-    </Card>
+    <div className="border rounded p-3 mb-4 shadow-sm bg-light">
+      <h5>Channel #{channelId}</h5>
+      <p className="mb-1"><strong>Status:</strong> {state}</p>
+      <p className="mb-1"><strong>Capacity:</strong> {capacity.toLocaleString()}</p>
+      <p className="mb-1"><strong>Inbound Messages:</strong> {inbound.toLocaleString()}</p>
+      <p className="mb-1"><strong>Outbound Messages:</strong> {outbound.toLocaleString()}</p>
+      <p className="mb-2"><strong>Pending Messages:</strong> {pending.toLocaleString()}</p>
+
+      <ProgressBar
+        now={percentUtilised}
+        label={`${percentUtilised.toFixed(1)}%`}
+        variant="primary"
+      />
+    </div>
   );
 };
 
