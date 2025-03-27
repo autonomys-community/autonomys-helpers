@@ -8,7 +8,7 @@ interface ChannelEntry {
   nextOutboxNonce: string;
   latestResponseReceivedMessageNonce: string;
   maxOutgoingMessages: string;
-  [key: string]: any;
+  [key: string]: string;
 }
 
 interface ChannelCardProps {

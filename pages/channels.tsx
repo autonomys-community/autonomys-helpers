@@ -10,7 +10,7 @@ export interface ChannelEntry {
   nextOutboxNonce: string;
   latestResponseReceivedMessageNonce: string;
   maxOutgoingMessages: string;
-  [key: string]: any;
+  [key: string]: string;
 }
 
 const CONSENSUS_ENDPOINT = "wss://rpc-0.taurus.subspace.network/ws";
@@ -36,9 +36,11 @@ export default function ChannelsPage() {
     setLoading(true);
     fetchChannels(endpoint, destinationChainId)
       .then((data) => {
-        const validChannels = (data as any[])
+        const validChannels = (data as unknown[])
           .filter((entry): entry is ChannelEntry =>
-            typeof entry === 'object' && entry !== null && 'channelId' in entry
+            typeof entry === 'object' &&
+            entry !== null &&
+            'channelId' in entry
           );
 
         console.log("Valid channels passed to state:", validChannels);
