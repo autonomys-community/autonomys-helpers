@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { ButtonGroup, ToggleButton } from 'react-bootstrap';
 import { fetchChannels } from '../utils/fetchChannels';
 import ChannelList from '../components/ChannelList';
+import ChainSummaryCard from '../components/ChainSummaryCard';
 
 export interface ChannelEntry {
   channelId: string;
@@ -53,6 +54,33 @@ export default function ChannelsPage() {
       });
   }, [endpoint, destinationChainId]);
 
+  const summary = useMemo(() => {
+    let totalCapacity = 0;
+    let totalInbound = 0;
+    let totalOutbound = 0;
+    let totalPending = 0;
+
+    channels.forEach((channel) => {
+      const capacity = parseNumber(channel.maxOutgoingMessages);
+      const inbox = parseNumber(channel.nextInboxNonce);
+      const outbox = parseNumber(channel.nextOutboxNonce);
+      const response = parseNumber(channel.latestResponseReceivedMessageNonce);
+
+      totalCapacity += capacity;
+      totalInbound += Math.max(0, inbox - 1);
+      totalOutbound += Math.max(0, outbox - 1);
+      totalPending += Math.max(0, outbox - 1 - response);
+    });
+
+    return {
+      totalChannels: channels.length,
+      totalCapacity,
+      totalInbound,
+      totalOutbound,
+      totalPending
+    };
+  }, [channels]);
+
   return (
     <div className="container py-5">
       <h1>XDM Channels Status</h1>
@@ -84,6 +112,10 @@ export default function ChannelsPage() {
           </ToggleButton>
         </ButtonGroup>
       </div>
+
+      {!loading && channels.length > 0 && (
+        <ChainSummaryCard {...summary} />
+      )}
 
       {loading ? (
         <div>Loading channel data...</div>
