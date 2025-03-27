@@ -1,24 +1,34 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
+import { ChannelEntry } from '../pages/channels';
 
-const WS_ENDPOINT = "wss://rpc-0.taurus.subspace.network/ws";
-
-export async function fetchChannels(): Promise<unknown[]> {
+export async function fetchChannels(
+  endpoint: string,
+  destinationChainId: { Domain: number } | { Consensus: number }
+): Promise<ChannelEntry[]> {
   try {
-    console.log("Connecting to:", WS_ENDPOINT);
-    const provider = new WsProvider(WS_ENDPOINT);
+    console.log("Connecting to:", endpoint);
+    const provider = new WsProvider(endpoint);
     const api = await ApiPromise.create({ provider });
     await api.isReady;
     console.log("Connected to Subspace RPC.");
 
-    const entries = await api.query.messenger.channels.entries({ Domain: 0 });
+    const entries = await api.query.messenger.channels.entries(destinationChainId);
     console.log(`Raw entries fetched (${entries.length}):`, entries);
 
-    const channels = entries.map(([_, value]) => {
-      const decoded = value.toHuman();
-      console.log("Decoded entry:", decoded);
-      return decoded;
+    // Debug decoded entries
+    entries.forEach(([key, value], index) => {
+      console.log(`Decoded channel ${index}:`, value.toHuman());
     });
 
+    const channels: ChannelEntry[] = entries
+      .map(([_, value]) => value.toHuman())
+      .filter((entry): entry is ChannelEntry =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        'channelId' in entry // loosened filter for debugging
+      );
+
+    console.log(`Valid channels decoded: ${channels.length}`);
     await api.disconnect();
     console.log("Disconnected from RPC.");
 
