@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { ButtonGroup, ToggleButton } from 'react-bootstrap';
 import { fetchChannels } from '../utils/fetchChannels';
 import ChannelList from '../components/ChannelList';
 
@@ -20,27 +21,23 @@ export default function ChannelsPage() {
   const [loading, setLoading] = useState(true);
   const [network, setNetwork] = useState<'consensus' | 'autoEvm'>('consensus');
 
-  const endpoint = useMemo(() => {
-    return network === 'consensus'
-      ? CONSENSUS_ENDPOINT
-      : AUTO_EVM_ENDPOINT;
-  }, [network]);
-
-  const destinationChainId = useMemo(() => {
-    return network === 'consensus'
-      ? { Domain: 0 }
-      : { Consensus: 0 };
+  const { endpoint, destinationChainId } = useMemo(() => {
+    return {
+      endpoint: network === 'consensus' ? CONSENSUS_ENDPOINT : AUTO_EVM_ENDPOINT,
+      destinationChainId: network === 'consensus' ? { Domain: 0 } : { Consensus: 0 }
+    };
   }, [network]);
 
   useEffect(() => {
     setLoading(true);
     fetchChannels(endpoint, destinationChainId)
       .then((data) => {
-        const validChannels = data.filter(
-          (entry): entry is ChannelEntry =>
+        const validChannels = (data as any[])
+          .filter((entry): entry is ChannelEntry =>
             typeof entry === 'object' && entry !== null && 'channelId' in entry
-        );
+          );
 
+        console.log("Valid channels passed to state:", validChannels);
         setChannels(validChannels);
         setLoading(false);
       })
@@ -56,28 +53,30 @@ export default function ChannelsPage() {
 
       <div className="mb-4">
         <label className="form-label me-3 fw-bold">Select Network:</label>
-        <div className="form-check form-check-inline">
-          <input
-            className="form-check-input"
+        <ButtonGroup>
+          <ToggleButton
+            id="toggle-consensus"
             type="radio"
+            variant={network === 'consensus' ? 'primary' : 'outline-primary'}
             name="networkToggle"
-            id="consensusRadio"
+            value="consensus"
             checked={network === 'consensus'}
             onChange={() => setNetwork('consensus')}
-          />
-          <label className="form-check-label" htmlFor="consensusRadio">Consensus Chain</label>
-        </div>
-        <div className="form-check form-check-inline">
-          <input
-            className="form-check-input"
+          >
+            Consensus Chain
+          </ToggleButton>
+          <ToggleButton
+            id="toggle-autoevm"
             type="radio"
+            variant={network === 'autoEvm' ? 'primary' : 'outline-primary'}
             name="networkToggle"
-            id="autoEvmRadio"
+            value="autoEvm"
             checked={network === 'autoEvm'}
             onChange={() => setNetwork('autoEvm')}
-          />
-          <label className="form-check-label" htmlFor="autoEvmRadio">Auto EVM</label>
-        </div>
+          >
+            Auto EVM
+          </ToggleButton>
+        </ButtonGroup>
       </div>
 
       {loading ? (
