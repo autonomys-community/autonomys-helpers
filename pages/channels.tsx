@@ -14,7 +14,7 @@ export interface ChannelEntry {
   [key: string]: string;
 }
 
-const CONSENSUS_ENDPOINT = "wss://rpc-0.taurus.subspace.network/ws";
+const CONSENSUS_ENDPOINT = "wss://rpc.taurus.autonomys.xyz/ws";
 const AUTO_EVM_ENDPOINT = "wss://auto-evm.taurus.autonomys.xyz/ws";
 
 function parseNumber(value: string | undefined): number {
