@@ -33,7 +33,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel, parseNumber }) => {
 
   const pending = Math.max(0, outbox - 1 - latestResponse);
   const inbound = Math.max(0, inbox - 1);
-  const outbound = Math.max(0, outbox - 1);
+  const outbound = Math.max(0, latestResponse);
 
   const percentUtilised = capacity > 0 ? Math.min((pending / capacity) * 100, 100) : 0;
 
@@ -42,9 +42,9 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel, parseNumber }) => {
       <h5>Channel #{channelId}</h5>
       <p className="mb-1"><strong>Status:</strong> {state}</p>
       <p className="mb-1"><strong>Capacity:</strong> {capacity.toLocaleString()}</p>
-      <p className="mb-1"><strong>Inbound Messages:</strong> {inbound.toLocaleString()}</p>
-      <p className="mb-1"><strong>Outbound Messages:</strong> {outbound.toLocaleString()}</p>
-      <p className="mb-2"><strong>Pending Messages:</strong> {pending.toLocaleString()}</p>
+      <p className="mb-1"><strong>Inbound Messages Processed:</strong> {inbound.toLocaleString()}</p>
+      <p className="mb-1"><strong>Outbound Messages Processed:</strong> {outbound.toLocaleString()}</p>
+      <p className="mb-2"><strong>Pending Outbound Messages:</strong> {pending.toLocaleString()}</p>
 
       <ProgressBar
         now={percentUtilised}

@@ -68,7 +68,7 @@ export default function ChannelsPage() {
 
       totalCapacity += capacity;
       totalInbound += Math.max(0, inbox - 1);
-      totalOutbound += Math.max(0, outbox - 1);
+      totalOutbound += Math.max(0, response);
       totalPending += Math.max(0, outbox - 1 - response);
     });
 
