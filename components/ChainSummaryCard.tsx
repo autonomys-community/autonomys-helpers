@@ -24,7 +24,7 @@ const ChainSummaryCard: React.FC<ChainSummaryCardProps> = ({
     <Card className="mb-4">
       <Card.Body>
         <Card.Title>Chain Summary</Card.Title>
-        <div><strong>Total Channels:</strong> {totalChannels.toLocaleString()}</div>
+        <div><strong>Total Open Channels:</strong> {totalChannels.toLocaleString()}</div>
         <div><strong>Total Capacity:</strong> {totalCapacity.toLocaleString()}</div>
         <div><strong>Total Inbound Messages Processed:</strong> {totalInbound.toLocaleString()}</div>
         <div><strong>Total Outbound Messages Processed:</strong> {totalOutbound.toLocaleString()}</div>

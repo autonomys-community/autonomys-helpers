@@ -66,14 +66,16 @@ export default function ChannelsPage() {
       const outbox = parseNumber(channel.nextOutboxNonce);
       const response = parseNumber(channel.latestResponseReceivedMessageNonce);
 
-      totalCapacity += capacity;
+      if (channel.state === 'Open') {
+        totalCapacity += capacity;
+      }
       totalInbound += Math.max(0, inbox - 1);
       totalOutbound += Math.max(0, response);
       totalPending += Math.max(0, outbox - 1 - response);
     });
 
     return {
-      totalChannels: channels.length,
+      totalChannels: channels.filter(channel => channel.state === 'Open').length,
       totalCapacity,
       totalInbound,
       totalOutbound,
