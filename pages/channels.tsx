@@ -14,8 +14,22 @@ export interface ChannelEntry {
   [key: string]: string;
 }
 
-const CONSENSUS_ENDPOINT = "wss://rpc.taurus.autonomys.xyz/ws";
-const AUTO_EVM_ENDPOINT = "wss://auto-evm.taurus.autonomys.xyz/ws";
+// Network configurations
+const NETWORKS = {
+  mainnet: {
+    name: 'Mainnet',
+    consensus: 'wss://rpc.mainnet.subspace.foundation/ws',
+    autoEvm: 'wss://auto-evm.mainnet.autonomys.xyz/ws'
+  },
+  chronos: {
+    name: 'Chronos Testnet',
+    consensus: 'wss://rpc.chronos.autonomys.xyz/ws',
+    autoEvm: 'wss://auto-evm.chronos.autonomys.xyz/ws'
+  }
+} as const;
+
+type NetworkType = keyof typeof NETWORKS;
+type ChainType = 'consensus' | 'autoEvm';
 
 function parseNumber(value: string | undefined): number {
   return Math.max(0, parseInt(value?.replace(/,/g, '') || '0', 10));
@@ -24,14 +38,16 @@ function parseNumber(value: string | undefined): number {
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<ChannelEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [network, setNetwork] = useState<'consensus' | 'autoEvm'>('consensus');
+  const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');
+  const [selectedChain, setSelectedChain] = useState<ChainType>('consensus');
 
   const { endpoint, destinationChainId } = useMemo(() => {
+    const networkConfig = NETWORKS[selectedNetwork];
     return {
-      endpoint: network === 'consensus' ? CONSENSUS_ENDPOINT : AUTO_EVM_ENDPOINT,
-      destinationChainId: network === 'consensus' ? { Domain: 0 } : { Consensus: 0 }
+      endpoint: selectedChain === 'consensus' ? networkConfig.consensus : networkConfig.autoEvm,
+      destinationChainId: selectedChain === 'consensus' ? { Domain: 0 } : { Consensus: 0 }
     };
-  }, [network]);
+  }, [selectedNetwork, selectedChain]);
 
   useEffect(() => {
     setLoading(true);
@@ -88,31 +104,62 @@ export default function ChannelsPage() {
       <h1>XDM Channels Status</h1>
 
       <div className="mb-4">
-        <label className="form-label me-3 fw-bold">Select Network:</label>
-        <ButtonGroup>
-          <ToggleButton
-            id="toggle-consensus"
-            type="radio"
-            variant={network === 'consensus' ? 'primary' : 'outline-primary'}
-            name="networkToggle"
-            value="consensus"
-            checked={network === 'consensus'}
-            onChange={() => setNetwork('consensus')}
-          >
-            Consensus Chain
-          </ToggleButton>
-          <ToggleButton
-            id="toggle-autoevm"
-            type="radio"
-            variant={network === 'autoEvm' ? 'primary' : 'outline-primary'}
-            name="networkToggle"
-            value="autoEvm"
-            checked={network === 'autoEvm'}
-            onChange={() => setNetwork('autoEvm')}
-          >
-            Auto EVM
-          </ToggleButton>
-        </ButtonGroup>
+        <div className="row">
+          <div className="col-md-6 mb-3">
+            <label className="form-label fw-bold">Select Network:</label>
+            <ButtonGroup className="w-100">
+              <ToggleButton
+                id="toggle-mainnet"
+                type="radio"
+                variant={selectedNetwork === 'mainnet' ? 'primary' : 'outline-primary'}
+                name="networkToggle"
+                value="mainnet"
+                checked={selectedNetwork === 'mainnet'}
+                onChange={() => setSelectedNetwork('mainnet')}
+              >
+                Mainnet
+              </ToggleButton>
+              <ToggleButton
+                id="toggle-chronos"
+                type="radio"
+                variant={selectedNetwork === 'chronos' ? 'primary' : 'outline-primary'}
+                name="networkToggle"
+                value="chronos"
+                checked={selectedNetwork === 'chronos'}
+                onChange={() => setSelectedNetwork('chronos')}
+              >
+                Chronos Testnet
+              </ToggleButton>
+            </ButtonGroup>
+          </div>
+          <div className="col-md-6 mb-3">
+            <label className="form-label fw-bold">Select Chain:</label>
+            <ButtonGroup className="w-100">
+              <ToggleButton
+                id="toggle-consensus"
+                type="radio"
+                variant={selectedChain === 'consensus' ? 'primary' : 'outline-primary'}
+                name="chainToggle"
+                value="consensus"
+                checked={selectedChain === 'consensus'}
+                onChange={() => setSelectedChain('consensus')}
+              >
+                Consensus Chain
+              </ToggleButton>
+              <ToggleButton
+                id="toggle-autoevm"
+                type="radio"
+                variant={selectedChain === 'autoEvm' ? 'primary' : 'outline-primary'}
+                name="chainToggle"
+                value="autoEvm"
+                checked={selectedChain === 'autoEvm'}
+                onChange={() => setSelectedChain('autoEvm')}
+              >
+                Auto EVM
+              </ToggleButton>
+            </ButtonGroup>
+          </div>
+        </div>
       </div>
 
       {!loading && channels.length > 0 && (
