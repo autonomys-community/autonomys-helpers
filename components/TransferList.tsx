@@ -2,16 +2,18 @@ import React, { useState, useCallback } from 'react';
 import TransferCard from './TransferCard';
 import { XdmTransfer } from '../utils/fetchTransfers';
 import { TransferProgress, transferKey } from '../utils/fetchTransferProgress';
+import { transferTimestampKey } from '../utils/fetchTimestamps';
 import { NetworkType } from '../config/networks';
 
 interface TransferListProps {
   transfers: XdmTransfer[];
   searchAddress: string;
   progress?: Map<string, TransferProgress>;
+  timestamps?: Map<string, Date>;
   network: NetworkType;
 }
 
-const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, network }) => {
+const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, timestamps, network }) => {
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
@@ -105,6 +107,7 @@ const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, p
           transfer={transfer}
           searchAddress={searchAddress}
           progress={progress?.get(transferKey(transfer, index))}
+          initiatedAt={timestamps?.get(transferTimestampKey(transfer))}
         />
       ))}
     </div>

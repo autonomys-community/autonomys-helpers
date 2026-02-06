@@ -9,12 +9,14 @@ import {
   truncateAddress,
 } from '../utils/fetchTransfers';
 import { TransferProgress, ProgressEntry } from '../utils/fetchTransferProgress';
+import { formatTimeAgo } from '../utils/fetchTimestamps';
 import CopyableText from './CopyableText';
 
 interface TransferCardProps {
   transfer: XdmTransfer;
   searchAddress: string;
   progress?: TransferProgress;
+  initiatedAt?: Date;
 }
 
 function StatusIcon({ statusLabel }: { statusLabel: string }) {
@@ -139,7 +141,7 @@ function ProgressSection({
   );
 }
 
-const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress }) => {
+const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress, initiatedAt }) => {
   const status = getTransferStatus(transfer);
   const isSender =
     transfer.sender.toLowerCase() === searchAddress.toLowerCase();
@@ -160,7 +162,12 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             </Badge>
             <Badge bg={status.variant}>{status.label}</Badge>
           </div>
-          <span className="text-muted small">
+          <span className="text-muted small text-end">
+            {initiatedAt && (
+              <span title={initiatedAt.toLocaleString()}>
+                {formatTimeAgo(initiatedAt)} &middot;{' '}
+              </span>
+            )}
             Nonce: {transfer.nonce} &middot; Channel: {transfer.channel_id}
           </span>
         </div>

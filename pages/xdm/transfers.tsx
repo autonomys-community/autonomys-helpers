@@ -5,6 +5,7 @@ import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
 import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
 import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
+import { fetchTransferTimestamps } from '../../utils/fetchTimestamps';
 import { NETWORKS, NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
@@ -16,10 +17,28 @@ export default function TransfersPage() {
   const [submittedAddress, setSubmittedAddress] = useState('');
   const [transfers, setTransfers] = useState<XdmTransfer[]>([]);
   const [progress, setProgress] = useState<Map<string, TransferProgress>>(new Map());
+  const [timestamps, setTimestamps] = useState<Map<string, Date>>(new Map());
   const [loading, setLoading] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const loadTimestamps = useCallback(
+    async (network: NetworkType, data: XdmTransfer[]) => {
+      if (data.length === 0) {
+        setTimestamps(new Map());
+        return;
+      }
+      try {
+        const ts = await fetchTransferTimestamps(network, data);
+        setTimestamps(ts);
+      } catch (err) {
+        console.error('Error fetching timestamps:', err);
+        // Non-critical: transfers still display without timestamps
+      }
+    },
+    []
+  );
 
   const loadProgress = useCallback(
     async (network: NetworkType, data: XdmTransfer[]) => {
@@ -61,8 +80,9 @@ export default function TransfersPage() {
         const data = await fetchTransfers(selectedNetwork, trimmed);
         setTransfers(data);
         setLoading(false);
-        // Fetch progress in the background after transfers are displayed
+        // Fetch progress and timestamps in the background after transfers are displayed
         loadProgress(selectedNetwork, data);
+        loadTimestamps(selectedNetwork, data);
       } catch (err) {
         console.error('Error fetching transfers:', err);
         setError(
@@ -74,7 +94,7 @@ export default function TransfersPage() {
         setLoading(false);
       }
     },
-    [address, selectedNetwork, loadProgress]
+    [address, selectedNetwork, loadProgress, loadTimestamps]
   );
 
   const handleNetworkChange = useCallback(
@@ -85,11 +105,13 @@ export default function TransfersPage() {
         setLoading(true);
         setError(null);
         setProgress(new Map());
+        setTimestamps(new Map());
         fetchTransfers(network, submittedAddress)
           .then((data) => {
             setTransfers(data);
             setLoading(false);
             loadProgress(network, data);
+            loadTimestamps(network, data);
           })
           .catch((err) => {
             console.error('Error fetching transfers:', err);
@@ -103,7 +125,7 @@ export default function TransfersPage() {
           });
       }
     },
-    [submittedAddress, loadProgress]
+    [submittedAddress, loadProgress, loadTimestamps]
   );
 
   // Auto-refresh every 30s when there are in-flight transfers
@@ -168,6 +190,7 @@ export default function TransfersPage() {
           setTransfers(data);
           setLoading(false);
           loadProgress(network, data);
+          loadTimestamps(network, data);
         })
         .catch((err) => {
           console.error('Error fetching transfers:', err);
@@ -180,7 +203,7 @@ export default function TransfersPage() {
           setLoading(false);
         });
     }
-  }, [router.isReady, router.query, loadProgress]);
+  }, [router.isReady, router.query, loadProgress, loadTimestamps]);
 
   return (
     <div className="container py-5">
@@ -280,6 +303,7 @@ export default function TransfersPage() {
             transfers={transfers}
             searchAddress={submittedAddress}
             progress={progress}
+            timestamps={timestamps}
             network={selectedNetwork}
           />
         </>
