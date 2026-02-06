@@ -153,9 +153,10 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
   const tokensAvailable = !!transfer.executed_dst_block;
 
   return (
-    <Card className="mb-3 shadow-sm">
-      <Card.Body>
-        <div className="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
+    <Card className="mb-4 shadow-sm">
+      <Card.Body className="p-3 p-md-4">
+        {/* Header: status + metadata */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-3">
           <div className="d-flex align-items-center">
             <span className="me-2" title={status.label}>
               <StatusIcon statusLabel={status.label} />
@@ -175,9 +176,15 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
           </span>
         </div>
 
-        <div className="row g-2 mb-2">
+        {/* Amount */}
+        <div className="mb-3">
+          <span className="fs-5 fw-bold">{formatAmount(transfer.amount)} AI3</span>
+        </div>
+
+        {/* From → To */}
+        <div className="row g-3 mb-3">
           <div className="col-md-6">
-            <div className="small text-muted">From</div>
+            <div className="small text-muted mb-1">From</div>
             <div className="fw-bold">{formatChainName(transfer.src_chain)}</div>
             <div className="d-flex align-items-center gap-1">
               <CopyableText
@@ -201,7 +208,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             </div>
           </div>
           <div className="col-md-6">
-            <div className="small text-muted">To</div>
+            <div className="small text-muted mb-1">To</div>
             <div className="fw-bold">{formatChainName(transfer.dst_chain)}</div>
             <div className="d-flex align-items-center gap-1">
               <CopyableText
@@ -226,11 +233,8 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
           </div>
         </div>
 
-        <div className="mb-2">
-          <span className="fs-5 fw-bold">{formatAmount(transfer.amount)} AI3</span>
-        </div>
-
-        <div className="small text-muted mb-1">{status.description}</div>
+        {/* Status description */}
+        <div className="small text-muted mb-2">{status.description}</div>
 
         {/* Token availability progress — shown prominently for pending transfers */}
         {progress?.availability && (
@@ -257,7 +261,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
           />
         )}
 
-        <details className="mt-2">
+        <details className="mt-3">
           <summary className="small text-muted" style={{ cursor: 'pointer' }}>
             Block Details
           </summary>
