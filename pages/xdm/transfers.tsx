@@ -1,12 +1,16 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
 import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
 import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
-import { NetworkType } from '../../config/networks';
+import { NETWORKS, NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
+  const router = useRouter();
+  const initialSearchDone = useRef(false);
+
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');
   const [address, setAddress] = useState('');
   const [submittedAddress, setSubmittedAddress] = useState('');
@@ -102,6 +106,49 @@ export default function TransfersPage() {
     [submittedAddress, loadProgress]
   );
 
+  // Read query parameters on mount and auto-search if ?search= is provided
+  useEffect(() => {
+    if (!router.isReady || initialSearchDone.current) return;
+    initialSearchDone.current = true;
+
+    const searchParam = router.query.search as string | undefined;
+    const networkParam = router.query.network as string | undefined;
+
+    if (networkParam && networkParam in NETWORKS) {
+      setSelectedNetwork(networkParam as NetworkType);
+    }
+
+    if (searchParam) {
+      const trimmed = searchParam.trim();
+      setAddress(trimmed);
+      setSubmittedAddress(trimmed);
+      setHasSearched(true);
+      setLoading(true);
+      setError(null);
+
+      const network = (networkParam && networkParam in NETWORKS)
+        ? networkParam as NetworkType
+        : 'mainnet';
+
+      fetchTransfers(network, trimmed)
+        .then((data) => {
+          setTransfers(data);
+          setLoading(false);
+          loadProgress(network, data);
+        })
+        .catch((err) => {
+          console.error('Error fetching transfers:', err);
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'An unexpected error occurred while fetching transfers.'
+          );
+          setTransfers([]);
+          setLoading(false);
+        });
+    }
+  }, [router.isReady, router.query, loadProgress]);
+
   return (
     <div className="container py-5">
       <h1>XDM Transfer Status</h1>
@@ -179,6 +226,7 @@ export default function TransfersPage() {
             transfers={transfers}
             searchAddress={submittedAddress}
             progress={progress}
+            network={selectedNetwork}
           />
         </>
       )}
