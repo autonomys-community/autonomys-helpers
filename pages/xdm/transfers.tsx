@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { ButtonGroup, ToggleButton, Form, Button, Spinner, Alert } from 'react-bootstrap';
-import TransferList from '../components/TransferList';
-import { fetchTransfers, XdmTransfer, NetworkType } from '../utils/fetchTransfers';
+import TransferList from '../../components/TransferList';
+import { fetchTransfers, XdmTransfer, NetworkType } from '../../utils/fetchTransfers';
 
 export default function TransfersPage() {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');

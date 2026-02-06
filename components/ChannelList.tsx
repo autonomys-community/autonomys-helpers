@@ -1,6 +1,6 @@
 import React from 'react';
 import ChannelCard from './ChannelCard';
-import { ChannelEntry } from '../pages/channels';
+import { ChannelEntry } from '../pages/xdm/channels';
 
 interface ChannelListProps {
   channels: ChannelEntry[];

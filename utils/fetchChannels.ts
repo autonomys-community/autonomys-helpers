@@ -1,5 +1,5 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { ChannelEntry } from '../pages/channels';
+import { ChannelEntry } from '../pages/xdm/channels';
 
 export async function fetchChannels(
   endpoint: string,
