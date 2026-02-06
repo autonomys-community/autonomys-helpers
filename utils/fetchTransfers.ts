@@ -24,7 +24,10 @@ export async function fetchTransfers(
   address: string
 ): Promise<XdmTransfer[]> {
   const baseUrl = `${NETWORKS[network].indexer}/transfers`;
-  const url = `${baseUrl}/${encodeURIComponent(address.trim())}`;
+  const trimmed = address.trim();
+  // EVM addresses (0x) are case-insensitive; the indexer stores them lowercase
+  const normalised = trimmed.startsWith('0x') ? trimmed.toLowerCase() : trimmed;
+  const url = `${baseUrl}/${encodeURIComponent(normalised)}`;
 
   const response = await fetch(url);
 
