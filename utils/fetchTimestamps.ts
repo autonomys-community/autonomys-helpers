@@ -2,14 +2,55 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import { XdmTransfer } from './fetchTransfers';
 import { NETWORKS, NetworkType } from '../config/networks';
 
+// ---------------------------------------------------------------------------
+// Two-layer cache: in-memory Map (fast) backed by localStorage (persistent)
+// Block timestamps are immutable so they can be cached indefinitely.
+// ---------------------------------------------------------------------------
+
+const STORAGE_KEY = 'xdm-block-timestamps';
+
+/** In-memory cache: blockHash → epoch ms */
+const memoryCache = new Map<string, number>();
+
+/** Hydrate in-memory cache from localStorage on first import. */
+function hydrateFromStorage(): void {
+  if (memoryCache.size > 0) return; // already hydrated
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const entries: [string, number][] = JSON.parse(raw);
+    for (const [hash, epoch] of entries) {
+      memoryCache.set(hash, epoch);
+    }
+  } catch {
+    // Corrupted data — start fresh
+  }
+}
+
+/** Persist the in-memory cache to localStorage. */
+function flushToStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const entries = Array.from(memoryCache.entries());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // Storage full or unavailable — silent fail
+  }
+}
+
 /**
  * Fetches the on-chain timestamp for each transfer's initiation block.
+ * Results are cached by block hash so repeated calls (e.g. auto-refresh)
+ * never re-query the same block.
  * Returns a Map keyed by "channelId-nonce-srcChain" → Date.
  */
 export async function fetchTransferTimestamps(
   network: NetworkType,
   transfers: XdmTransfer[]
 ): Promise<Map<string, Date>> {
+  hydrateFromStorage();
+
   const timestamps = new Map<string, Date>();
 
   // Group transfers by source chain so we connect to the right RPC
@@ -18,12 +59,27 @@ export async function fetchTransferTimestamps(
 
   for (const t of transfers) {
     if (!t.initiated_src_block) continue;
+
+    // Check cache first
+    const cached = memoryCache.get(t.initiated_src_block.block_hash);
+    if (cached !== undefined) {
+      timestamps.set(transferTimestampKey(t), new Date(cached));
+      continue;
+    }
+
     if (t.src_chain === 'Consensus') {
       consensusSrc.push(t);
     } else {
       domainSrc.push(t);
     }
   }
+
+  // If everything was cached, return immediately — no RPC needed
+  if (consensusSrc.length === 0 && domainSrc.length === 0) {
+    return timestamps;
+  }
+
+  let cacheUpdated = false;
 
   const fetchBatch = async (
     rpcUrl: string,
@@ -51,8 +107,11 @@ export async function fetchTransferTimestamps(
           try {
             const apiAt = await api.at(blockHash);
             const ts = await apiAt.query.timestamp.now();
-            const date = new Date(Number(ts.toString()));
-            return { keys, date };
+            const epoch = Number(ts.toString());
+            // Write to cache
+            memoryCache.set(blockHash, epoch);
+            cacheUpdated = true;
+            return { keys, date: new Date(epoch) };
           } catch {
             return null;
           }
@@ -77,6 +136,11 @@ export async function fetchTransferTimestamps(
     fetchBatch(config.rpc.consensus, consensusSrc),
     fetchBatch(config.rpc.autoEvm, domainSrc),
   ]);
+
+  // Persist to localStorage only if we added new entries
+  if (cacheUpdated) {
+    flushToStorage();
+  }
 
   return timestamps;
 }
