@@ -6,7 +6,7 @@ export default function Home() {
       <h1>Autonomys Helpers</h1>
       <ul className="mt-4">
         <li><Link href="/channels">View XDM Channel Status</Link></li>
-        {/* Add more links to other sub-pages as needed */}
+        <li><Link href="/transfers">View XDM Transfer Status</Link></li>
       </ul>
     </div>
   )
