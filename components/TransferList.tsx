@@ -11,9 +11,10 @@ interface TransferListProps {
   progress?: Map<string, TransferProgress>;
   timestamps?: Map<string, Date>;
   network: NetworkType;
+  onSearchAddress?: (address: string) => void;
 }
 
-const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, timestamps, network }) => {
+const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, timestamps, network, onSearchAddress }) => {
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
@@ -108,6 +109,8 @@ const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, p
           searchAddress={searchAddress}
           progress={progress?.get(transferKey(transfer, index))}
           initiatedAt={timestamps?.get(transferTimestampKey(transfer))}
+          network={network}
+          onSearchAddress={onSearchAddress}
         />
       ))}
     </div>

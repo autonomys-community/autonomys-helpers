@@ -63,6 +63,37 @@ export default function TransfersPage() {
     []
   );
 
+  const searchFor = useCallback(
+    (newAddress: string) => {
+      setAddress(newAddress);
+      setLoading(true);
+      setError(null);
+      setHasSearched(true);
+      setSubmittedAddress(newAddress);
+      setProgress(new Map());
+      setTimestamps(new Map());
+
+      fetchTransfers(selectedNetwork, newAddress)
+        .then((data) => {
+          setTransfers(data);
+          setLoading(false);
+          loadProgress(selectedNetwork, data);
+          loadTimestamps(selectedNetwork, data);
+        })
+        .catch((err) => {
+          console.error('Error fetching transfers:', err);
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'An unexpected error occurred while fetching transfers.'
+          );
+          setTransfers([]);
+          setLoading(false);
+        });
+    },
+    [selectedNetwork, loadProgress, loadTimestamps]
+  );
+
   const handleSearch = useCallback(
     async (e?: React.FormEvent) => {
       if (e) e.preventDefault();
@@ -305,6 +336,7 @@ export default function TransfersPage() {
             progress={progress}
             timestamps={timestamps}
             network={selectedNetwork}
+            onSearchAddress={searchFor}
           />
         </>
       )}

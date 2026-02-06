@@ -17,6 +17,8 @@ interface TransferCardProps {
   searchAddress: string;
   progress?: TransferProgress;
   initiatedAt?: Date;
+  network: string;
+  onSearchAddress?: (address: string) => void;
 }
 
 function StatusIcon({ statusLabel }: { statusLabel: string }) {
@@ -141,10 +143,11 @@ function ProgressSection({
   );
 }
 
-const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress, initiatedAt }) => {
+const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress, initiatedAt, network, onSearchAddress }) => {
   const status = getTransferStatus(transfer);
   const isSender =
     transfer.sender.toLowerCase() === searchAddress.toLowerCase();
+  const counterpart = isSender ? transfer.receiver : transfer.sender;
 
   // Tokens are available once the transfer has been executed on the destination
   const tokensAvailable = !!transfer.executed_dst_block;
@@ -176,20 +179,50 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
           <div className="col-md-6">
             <div className="small text-muted">From</div>
             <div className="fw-bold">{formatChainName(transfer.src_chain)}</div>
-            <CopyableText
-              text={transfer.sender}
-              displayText={truncateAddress(transfer.sender)}
-              className="text-break small"
-            />
+            <div className="d-flex align-items-center gap-1">
+              <CopyableText
+                text={transfer.sender}
+                displayText={truncateAddress(transfer.sender)}
+                className="text-break small"
+              />
+              {!isSender && onSearchAddress && (
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0 border-0"
+                  onClick={() => onSearchAddress(counterpart)}
+                  title={`Search transfers for ${truncateAddress(counterpart)}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
           <div className="col-md-6">
             <div className="small text-muted">To</div>
             <div className="fw-bold">{formatChainName(transfer.dst_chain)}</div>
-            <CopyableText
-              text={transfer.receiver}
-              displayText={truncateAddress(transfer.receiver)}
-              className="text-break small"
-            />
+            <div className="d-flex align-items-center gap-1">
+              <CopyableText
+                text={transfer.receiver}
+                displayText={truncateAddress(transfer.receiver)}
+                className="text-break small"
+              />
+              {isSender && onSearchAddress && (
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0 border-0"
+                  onClick={() => onSearchAddress(counterpart)}
+                  title={`Search transfers for ${truncateAddress(counterpart)}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
