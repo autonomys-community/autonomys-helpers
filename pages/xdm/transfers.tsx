@@ -237,8 +237,8 @@ export default function TransfersPage() {
   }, [router.isReady, router.query, loadProgress, loadTimestamps]);
 
   return (
-    <div className="container py-5">
-      <h1>XDM Transfer Status</h1>
+    <div className="container py-3 py-md-5">
+      <h1 className="fs-3 fs-md-1">XDM Transfer Status</h1>
       <p className="text-muted mb-4">
         Look up cross-domain message transfers by sender or receiver address.
         Enter a Substrate (SS58) or EVM (0x) address to view transfer history.
@@ -252,15 +252,20 @@ export default function TransfersPage() {
       <Form onSubmit={handleSearch} className="mb-4">
         <Form.Group>
           <Form.Label className="fw-bold">Wallet Address:</Form.Label>
-          <div className="d-flex gap-2">
+          <div className="d-flex flex-column flex-sm-row gap-2">
             <Form.Control
               type="text"
-              placeholder="Enter sender or receiver address (e.g. sub... or 0x...)"
+              placeholder="Enter address (e.g. sub... or 0x...)"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               disabled={loading}
             />
-            <Button type="submit" variant="primary" disabled={loading || !address.trim()}>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={loading || !address.trim()}
+              className="flex-shrink-0"
+            >
               {loading ? (
                 <>
                   <Spinner

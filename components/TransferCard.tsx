@@ -155,7 +155,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
   return (
     <Card className="mb-3 shadow-sm">
       <Card.Body>
-        <div className="d-flex justify-content-between align-items-start mb-2">
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
           <div className="d-flex align-items-center">
             <span className="me-2" title={status.label}>
               <StatusIcon statusLabel={status.label} />
@@ -175,7 +175,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
           </span>
         </div>
 
-        <div className="row mb-2">
+        <div className="row g-2 mb-2">
           <div className="col-md-6">
             <div className="small text-muted">From</div>
             <div className="fw-bold">{formatChainName(transfer.src_chain)}</div>
