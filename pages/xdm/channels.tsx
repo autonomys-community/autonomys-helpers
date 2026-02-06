@@ -3,6 +3,8 @@ import { ButtonGroup, ToggleButton } from 'react-bootstrap';
 import { fetchChannels } from '../../utils/fetchChannels';
 import ChannelList from '../../components/ChannelList';
 import ChainSummaryCard from '../../components/ChainSummaryCard';
+import NetworkSelector from '../../components/NetworkSelector';
+import { NETWORKS, NetworkType } from '../../config/networks';
 
 export interface ChannelEntry {
   channelId: string;
@@ -14,21 +16,6 @@ export interface ChannelEntry {
   [key: string]: string;
 }
 
-// Network configurations
-const NETWORKS = {
-  mainnet: {
-    name: 'Mainnet',
-    consensus: 'wss://rpc.mainnet.subspace.foundation/ws',
-    autoEvm: 'wss://auto-evm.mainnet.autonomys.xyz/ws'
-  },
-  chronos: {
-    name: 'Chronos Testnet',
-    consensus: 'wss://rpc.chronos.autonomys.xyz/ws',
-    autoEvm: 'wss://auto-evm.chronos.autonomys.xyz/ws'
-  }
-} as const;
-
-type NetworkType = keyof typeof NETWORKS;
 type ChainType = 'consensus' | 'autoEvm';
 
 function parseNumber(value: string | undefined): number {
@@ -42,9 +29,9 @@ export default function ChannelsPage() {
   const [selectedChain, setSelectedChain] = useState<ChainType>('consensus');
 
   const { endpoint, destinationChainId } = useMemo(() => {
-    const networkConfig = NETWORKS[selectedNetwork];
+    const rpc = NETWORKS[selectedNetwork].rpc;
     return {
-      endpoint: selectedChain === 'consensus' ? networkConfig.consensus : networkConfig.autoEvm,
+      endpoint: selectedChain === 'consensus' ? rpc.consensus : rpc.autoEvm,
       destinationChainId: selectedChain === 'consensus' ? { Domain: 0 } : { Consensus: 0 }
     };
   }, [selectedNetwork, selectedChain]);
@@ -106,31 +93,10 @@ export default function ChannelsPage() {
       <div className="mb-4">
         <div className="row">
           <div className="col-md-6 mb-3">
-            <label className="form-label fw-bold">Select Network:</label>
-            <ButtonGroup className="w-100">
-              <ToggleButton
-                id="toggle-mainnet"
-                type="radio"
-                variant={selectedNetwork === 'mainnet' ? 'primary' : 'outline-primary'}
-                name="networkToggle"
-                value="mainnet"
-                checked={selectedNetwork === 'mainnet'}
-                onChange={() => setSelectedNetwork('mainnet')}
-              >
-                Mainnet
-              </ToggleButton>
-              <ToggleButton
-                id="toggle-chronos"
-                type="radio"
-                variant={selectedNetwork === 'chronos' ? 'primary' : 'outline-primary'}
-                name="networkToggle"
-                value="chronos"
-                checked={selectedNetwork === 'chronos'}
-                onChange={() => setSelectedNetwork('chronos')}
-              >
-                Chronos Testnet
-              </ToggleButton>
-            </ButtonGroup>
+            <NetworkSelector
+              selectedNetwork={selectedNetwork}
+              onChange={setSelectedNetwork}
+            />
           </div>
           <div className="col-md-6 mb-3">
             <label className="form-label fw-bold">Select Chain:</label>

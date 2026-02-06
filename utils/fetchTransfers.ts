@@ -17,18 +17,13 @@ export interface XdmTransfer {
   transfer_successful: boolean;
 }
 
-const INDEXER_ENDPOINTS = {
-  mainnet: 'https://indexer-api.mainnet.autonomys.xyz/v1/xdm/transfers',
-  chronos: 'https://indexer-api.chronos.autonomys.xyz/v1/xdm/transfers',
-} as const;
-
-export type NetworkType = keyof typeof INDEXER_ENDPOINTS;
+import { NETWORKS, NetworkType } from '../config/networks';
 
 export async function fetchTransfers(
   network: NetworkType,
   address: string
 ): Promise<XdmTransfer[]> {
-  const baseUrl = INDEXER_ENDPOINTS[network];
+  const baseUrl = `${NETWORKS[network].indexer}/transfers`;
   const url = `${baseUrl}/${encodeURIComponent(address.trim())}`;
 
   const response = await fetch(url);

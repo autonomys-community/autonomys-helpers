@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { ButtonGroup, ToggleButton, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
-import { fetchTransfers, XdmTransfer, NetworkType } from '../../utils/fetchTransfers';
+import NetworkSelector from '../../components/NetworkSelector';
+import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
+import { NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');
@@ -74,33 +76,10 @@ export default function TransfersPage() {
         Enter a Substrate (SS58) or EVM (0x) address to view transfer history.
       </p>
 
-      <div className="mb-4">
-        <label className="form-label fw-bold">Select Network:</label>
-        <ButtonGroup className="w-100">
-          <ToggleButton
-            id="toggle-mainnet"
-            type="radio"
-            variant={selectedNetwork === 'mainnet' ? 'primary' : 'outline-primary'}
-            name="networkToggle"
-            value="mainnet"
-            checked={selectedNetwork === 'mainnet'}
-            onChange={() => handleNetworkChange('mainnet')}
-          >
-            Mainnet
-          </ToggleButton>
-          <ToggleButton
-            id="toggle-chronos"
-            type="radio"
-            variant={selectedNetwork === 'chronos' ? 'primary' : 'outline-primary'}
-            name="networkToggle"
-            value="chronos"
-            checked={selectedNetwork === 'chronos'}
-            onChange={() => handleNetworkChange('chronos')}
-          >
-            Chronos Testnet
-          </ToggleButton>
-        </ButtonGroup>
-      </div>
+      <NetworkSelector
+        selectedNetwork={selectedNetwork}
+        onChange={handleNetworkChange}
+      />
 
       <Form onSubmit={handleSearch} className="mb-4">
         <Form.Group>
