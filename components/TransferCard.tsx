@@ -17,6 +17,66 @@ interface TransferCardProps {
   progress?: TransferProgress;
 }
 
+function StatusIcon({ statusLabel }: { statusLabel: string }) {
+  const size = 24;
+  const props = {
+    xmlns: 'http://www.w3.org/2000/svg',
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  switch (statusLabel) {
+    case 'Pending':
+      // Hourglass / clock
+      return (
+        <svg {...props} stroke="#f0ad4e">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    case 'Executed':
+      // Arrow right circle (in transit)
+      return (
+        <svg {...props} stroke="#0dcaf0">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 16 16 12 12 8" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+      );
+    case 'Completed':
+      // Check circle
+      return (
+        <svg {...props} stroke="#198754">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="9 12 11.5 14.5 16 9.5" />
+        </svg>
+      );
+    case 'Failed':
+      // X circle
+      return (
+        <svg {...props} stroke="#dc3545">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+      );
+    default:
+      // Question mark circle
+      return (
+        <svg {...props} stroke="#6c757d">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+  }
+}
+
 function ProgressSection({
   entry,
   label,
@@ -91,7 +151,10 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
     <Card className="mb-3 shadow-sm">
       <Card.Body>
         <div className="d-flex justify-content-between align-items-start mb-2">
-          <div>
+          <div className="d-flex align-items-center">
+            <span className="me-2" title={status.label}>
+              <StatusIcon statusLabel={status.label} />
+            </span>
             <Badge bg={isSender ? 'primary' : 'secondary'} className="me-2">
               {isSender ? 'Sent' : 'Received'}
             </Badge>
