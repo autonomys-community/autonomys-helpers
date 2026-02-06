@@ -8,6 +8,7 @@ import {
   truncateHash,
   truncateAddress,
 } from '../utils/fetchTransfers';
+import CopyableText from './CopyableText';
 
 interface TransferCardProps {
   transfer: XdmTransfer;
@@ -38,16 +39,20 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress }) 
           <div className="col-md-6">
             <div className="small text-muted">From</div>
             <div className="fw-bold">{formatChainName(transfer.src_chain)}</div>
-            <div className="text-break small" title={transfer.sender}>
-              {truncateAddress(transfer.sender)}
-            </div>
+            <CopyableText
+              text={transfer.sender}
+              displayText={truncateAddress(transfer.sender)}
+              className="text-break small"
+            />
           </div>
           <div className="col-md-6">
             <div className="small text-muted">To</div>
             <div className="fw-bold">{formatChainName(transfer.dst_chain)}</div>
-            <div className="text-break small" title={transfer.receiver}>
-              {truncateAddress(transfer.receiver)}
-            </div>
+            <CopyableText
+              text={transfer.receiver}
+              displayText={truncateAddress(transfer.receiver)}
+              className="text-break small"
+            />
           </div>
         </div>
 
