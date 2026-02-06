@@ -18,3 +18,7 @@ export const NETWORKS = {
 } as const;
 
 export type NetworkType = keyof typeof NETWORKS;
+
+// XDM confirmation depths in domain blocks
+export const CONSENSUS_TO_DOMAIN_DEPTH = 100;
+export const DOMAIN_TO_CONSENSUS_DEPTH = 14_400;

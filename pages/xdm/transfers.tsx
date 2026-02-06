@@ -3,6 +3,7 @@ import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
 import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
+import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
 import { NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
@@ -10,9 +11,34 @@ export default function TransfersPage() {
   const [address, setAddress] = useState('');
   const [submittedAddress, setSubmittedAddress] = useState('');
   const [transfers, setTransfers] = useState<XdmTransfer[]>([]);
+  const [progress, setProgress] = useState<Map<string, TransferProgress>>(new Map());
   const [loading, setLoading] = useState(false);
+  const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const loadProgress = useCallback(
+    async (network: NetworkType, data: XdmTransfer[]) => {
+      const hasInFlight = data.some(
+        (t) => t.initiated_src_block && (!t.executed_dst_block || !t.acknowledged_src_block)
+      );
+      if (!hasInFlight) {
+        setProgress(new Map());
+        return;
+      }
+      setProgressLoading(true);
+      try {
+        const progressData = await fetchTransferProgress(network, data);
+        setProgress(progressData);
+      } catch (err) {
+        console.error('Error fetching transfer progress:', err);
+        // Non-critical: transfers still display, just without progress
+      } finally {
+        setProgressLoading(false);
+      }
+    },
+    []
+  );
 
   const handleSearch = useCallback(
     async (e?: React.FormEvent) => {
@@ -25,10 +51,14 @@ export default function TransfersPage() {
       setError(null);
       setHasSearched(true);
       setSubmittedAddress(trimmed);
+      setProgress(new Map());
 
       try {
         const data = await fetchTransfers(selectedNetwork, trimmed);
         setTransfers(data);
+        setLoading(false);
+        // Fetch progress in the background after transfers are displayed
+        loadProgress(selectedNetwork, data);
       } catch (err) {
         console.error('Error fetching transfers:', err);
         setError(
@@ -37,11 +67,10 @@ export default function TransfersPage() {
             : 'An unexpected error occurred while fetching transfers.'
         );
         setTransfers([]);
-      } finally {
         setLoading(false);
       }
     },
-    [address, selectedNetwork]
+    [address, selectedNetwork, loadProgress]
   );
 
   const handleNetworkChange = useCallback(
@@ -51,8 +80,13 @@ export default function TransfersPage() {
       if (submittedAddress) {
         setLoading(true);
         setError(null);
+        setProgress(new Map());
         fetchTransfers(network, submittedAddress)
-          .then((data) => setTransfers(data))
+          .then((data) => {
+            setTransfers(data);
+            setLoading(false);
+            loadProgress(network, data);
+          })
           .catch((err) => {
             console.error('Error fetching transfers:', err);
             setError(
@@ -61,11 +95,11 @@ export default function TransfersPage() {
                 : 'An unexpected error occurred while fetching transfers.'
             );
             setTransfers([]);
-          })
-          .finally(() => setLoading(false));
+            setLoading(false);
+          });
       }
     },
-    [submittedAddress]
+    [submittedAddress, loadProgress]
   );
 
   return (
@@ -127,7 +161,26 @@ export default function TransfersPage() {
       )}
 
       {!loading && hasSearched && (
-        <TransferList transfers={transfers} searchAddress={submittedAddress} />
+        <>
+          {progressLoading && (
+            <div className="mb-3 text-muted small">
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-1"
+              />
+              Loading progress data from chain...
+            </div>
+          )}
+          <TransferList
+            transfers={transfers}
+            searchAddress={submittedAddress}
+            progress={progress}
+          />
+        </>
       )}
 
       {!hasSearched && (

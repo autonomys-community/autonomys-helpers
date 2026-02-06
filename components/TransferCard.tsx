@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Badge } from 'react-bootstrap';
+import { Card, Badge, ProgressBar } from 'react-bootstrap';
 import {
   XdmTransfer,
   getTransferStatus,
@@ -8,17 +8,84 @@ import {
   truncateHash,
   truncateAddress,
 } from '../utils/fetchTransfers';
+import { TransferProgress, ProgressEntry } from '../utils/fetchTransferProgress';
 import CopyableText from './CopyableText';
 
 interface TransferCardProps {
   transfer: XdmTransfer;
   searchAddress: string;
+  progress?: TransferProgress;
 }
 
-const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress }) => {
+function ProgressSection({
+  entry,
+  label,
+  prominent,
+}: {
+  entry: ProgressEntry;
+  label: string;
+  prominent: boolean;
+}) {
+  const percent = Math.min(
+    100,
+    ((entry.totalBlocks - entry.remainingBlocks) / entry.totalBlocks) * 100
+  );
+
+  if (prominent) {
+    return (
+      <div className="mt-2 mb-1">
+        <div className="d-flex justify-content-between small mb-1">
+          <span className="fw-bold">{label}</span>
+          <span>
+            {entry.remainingBlocks > 0 ? (
+              <>{entry.remainingBlocks.toLocaleString()} domain blocks remaining</>
+            ) : (
+              <span className="text-success fw-bold">Ready</span>
+            )}
+          </span>
+        </div>
+        <ProgressBar
+          now={percent}
+          label={`${percent.toFixed(0)}%`}
+          variant={percent >= 100 ? 'success' : 'primary'}
+          animated={percent < 100}
+        />
+        <div className="text-muted small mt-1">
+          Block {entry.currentBlock.toLocaleString()} of {entry.targetBlock.toLocaleString()} (target)
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 small text-muted">
+      <div className="d-flex justify-content-between mb-1">
+        <span>{label}</span>
+        <span>
+          {entry.remainingBlocks > 0 ? (
+            <>{entry.remainingBlocks.toLocaleString()} domain blocks remaining</>
+          ) : (
+            <>Complete</>
+          )}
+        </span>
+      </div>
+      <ProgressBar
+        now={percent}
+        label={`${percent.toFixed(0)}%`}
+        variant={percent >= 100 ? 'success' : 'secondary'}
+        style={{ height: '0.5rem' }}
+      />
+    </div>
+  );
+}
+
+const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress }) => {
   const status = getTransferStatus(transfer);
   const isSender =
     transfer.sender.toLowerCase() === searchAddress.toLowerCase();
+
+  // Tokens are available once the transfer has been executed on the destination
+  const tokensAvailable = !!transfer.executed_dst_block;
 
   return (
     <Card className="mb-3 shadow-sm">
@@ -61,6 +128,31 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress }) 
         </div>
 
         <div className="small text-muted mb-1">{status.description}</div>
+
+        {/* Token availability progress — shown prominently for pending transfers */}
+        {progress?.availability && (
+          <ProgressSection
+            entry={progress.availability}
+            label="Token Availability"
+            prominent
+          />
+        )}
+
+        {/* For executed transfers: show that tokens are available */}
+        {tokensAvailable && !transfer.acknowledged_src_block && (
+          <div className="mt-2 mb-1 small text-success fw-bold">
+            Tokens available to recipient
+          </div>
+        )}
+
+        {/* Completion/acknowledgment progress — shown as secondary */}
+        {progress?.completion && (
+          <ProgressSection
+            entry={progress.completion}
+            label="Transfer Completion"
+            prominent={false}
+          />
+        )}
 
         <details className="mt-2">
           <summary className="small text-muted" style={{ cursor: 'pointer' }}>
