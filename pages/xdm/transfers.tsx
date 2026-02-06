@@ -11,6 +11,7 @@ import { NETWORKS, NetworkType } from '../../config/networks';
 export default function TransfersPage() {
   const router = useRouter();
   const initialSearchDone = useRef(false);
+  const isAutoRefreshing = useRef(false);
 
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');
   const [address, setAddress] = useState('');
@@ -19,6 +20,7 @@ export default function TransfersPage() {
   const [progress, setProgress] = useState<Map<string, TransferProgress>>(new Map());
   const [timestamps, setTimestamps] = useState<Map<string, Date>>(new Map());
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
@@ -175,12 +177,17 @@ export default function TransfersPage() {
 
     if (hasInFlight && submittedAddress) {
       autoRefreshInterval.current = setInterval(async () => {
+        isAutoRefreshing.current = true;
+        setRefreshing(true);
         try {
           const data = await fetchTransfers(selectedNetwork, submittedAddress);
           setTransfers(data);
-          loadProgress(selectedNetwork, data);
+          await loadProgress(selectedNetwork, data);
         } catch (err) {
           console.error('Auto-refresh failed:', err);
+        } finally {
+          isAutoRefreshing.current = false;
+          setRefreshing(false);
         }
       }, 30_000);
     }
@@ -301,7 +308,7 @@ export default function TransfersPage() {
 
       {!loading && hasSearched && (
         <>
-          {progressLoading && (
+          {progressLoading && !isAutoRefreshing.current && (
             <div className="mb-3 text-muted small">
               <Spinner
                 as="span"
@@ -333,6 +340,16 @@ export default function TransfersPage() {
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
               Auto-refreshing every 30 seconds
+              {refreshing && (
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="ms-1"
+                />
+              )}
             </div>
           )}
           <TransferList
