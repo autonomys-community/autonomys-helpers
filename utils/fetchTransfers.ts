@@ -39,6 +39,8 @@ export async function fetchTransfers(
   }
 
   const data: XdmTransfer[] = await response.json();
+  // Sort by nonce descending so the latest transfer is always first
+  data.sort((a, b) => parseInt(b.nonce, 10) - parseInt(a.nonce, 10));
   return data;
 }
 
