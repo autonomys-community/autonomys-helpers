@@ -1,5 +1,5 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { ChannelEntry } from '../pages/channels';
+import { ChannelEntry } from '../pages/xdm/channels';
 
 export async function fetchChannels(
   endpoint: string,
@@ -16,12 +16,12 @@ export async function fetchChannels(
     console.log(`Raw entries fetched (${entries.length}):`, entries);
 
     // Debug decoded entries
-    entries.forEach(([key, value], index) => {
+    entries.forEach(([_key, value], index) => {
       console.log(`Decoded channel ${index}:`, value.toHuman());
     });
 
     const channels: ChannelEntry[] = entries
-      .map(([_, value]) => value.toHuman())
+      .map(([_key, value]) => value.toHuman())
       .filter((entry): entry is ChannelEntry =>
         typeof entry === 'object' &&
         entry !== null &&
