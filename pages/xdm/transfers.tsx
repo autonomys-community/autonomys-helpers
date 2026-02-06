@@ -106,6 +106,39 @@ export default function TransfersPage() {
     [submittedAddress, loadProgress]
   );
 
+  // Auto-refresh every 30s when there are in-flight transfers
+  const autoRefreshInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const hasInFlight = transfers.some(
+      (t) => t.initiated_src_block && (!t.executed_dst_block || !t.acknowledged_src_block)
+    );
+
+    // Clear any existing interval
+    if (autoRefreshInterval.current) {
+      clearInterval(autoRefreshInterval.current);
+      autoRefreshInterval.current = null;
+    }
+
+    if (hasInFlight && submittedAddress) {
+      autoRefreshInterval.current = setInterval(async () => {
+        try {
+          const data = await fetchTransfers(selectedNetwork, submittedAddress);
+          setTransfers(data);
+          loadProgress(selectedNetwork, data);
+        } catch (err) {
+          console.error('Auto-refresh failed:', err);
+        }
+      }, 30_000);
+    }
+
+    return () => {
+      if (autoRefreshInterval.current) {
+        clearInterval(autoRefreshInterval.current);
+      }
+    };
+  }, [transfers, submittedAddress, selectedNetwork, loadProgress]);
+
   // Read query parameters on mount and auto-search if ?search= is provided
   useEffect(() => {
     if (!router.isReady || initialSearchDone.current) return;
@@ -220,6 +253,27 @@ export default function TransfersPage() {
                 className="me-1"
               />
               Loading progress data from chain...
+            </div>
+          )}
+          {transfers.some(
+            (t) => t.initiated_src_block && (!t.executed_dst_block || !t.acknowledged_src_block)
+          ) && (
+            <div className="mb-2 text-muted small d-flex align-items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Auto-refreshing every 30 seconds
             </div>
           )}
           <TransferList
