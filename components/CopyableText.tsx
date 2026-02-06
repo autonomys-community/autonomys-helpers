@@ -39,7 +39,7 @@ const CopyableText: React.FC<CopyableTextProps> = ({ text, displayText, classNam
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
       style={{ cursor: 'pointer' }}
     >
-      {displayText ?? text}
+      {displayText !== undefined ? displayText : text}
       {copied ? (
         <svg
           className="ms-1"

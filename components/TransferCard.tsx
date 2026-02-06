@@ -10,6 +10,7 @@ import {
 } from '../utils/fetchTransfers';
 import { TransferProgress, ProgressEntry } from '../utils/fetchTransferProgress';
 import { formatTimeAgo } from '../utils/fetchTimestamps';
+import { getAddressExplorerUrl, NetworkType } from '../config/networks';
 import CopyableText from './CopyableText';
 
 interface TransferCardProps {
@@ -187,10 +188,19 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             <div className="small text-muted mb-1">From</div>
             <div className="fw-bold">{formatChainName(transfer.src_chain)}</div>
             <div className="d-flex align-items-center gap-1">
+              <a
+                href={getAddressExplorerUrl(network as NetworkType, transfer.sender, transfer.src_chain)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-break small text-decoration-none"
+                title={`View ${transfer.sender} on explorer`}
+              >
+                {truncateAddress(transfer.sender)}
+              </a>
               <CopyableText
                 text={transfer.sender}
-                displayText={truncateAddress(transfer.sender)}
-                className="text-break small"
+                displayText=""
+                className="small"
               />
               {!isSender && onSearchAddress && (
                 <button
@@ -211,10 +221,19 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             <div className="small text-muted mb-1">To</div>
             <div className="fw-bold">{formatChainName(transfer.dst_chain)}</div>
             <div className="d-flex align-items-center gap-1">
+              <a
+                href={getAddressExplorerUrl(network as NetworkType, transfer.receiver, transfer.dst_chain)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-break small text-decoration-none"
+                title={`View ${transfer.receiver} on explorer`}
+              >
+                {truncateAddress(transfer.receiver)}
+              </a>
               <CopyableText
                 text={transfer.receiver}
-                displayText={truncateAddress(transfer.receiver)}
-                className="text-break small"
+                displayText=""
+                className="small"
               />
               {isSender && onSearchAddress && (
                 <button
