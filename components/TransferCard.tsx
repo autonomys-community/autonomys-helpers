@@ -197,7 +197,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
 
         {/* From → To */}
         <div className="row g-0 mb-2 align-items-center">
-          <div className="col-12 col-md-5">
+          <div className="col-12 col-md-5 border rounded p-2" style={{ backgroundColor: '#f8f9fa' }}>
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               From
             </div>
@@ -244,7 +244,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
               <polyline points="19 12 12 19 5 12" />
             </svg>
           </div>
-          <div className="col-12 col-md-5">
+          <div className="col-12 col-md-5 border rounded p-2" style={{ backgroundColor: '#f8f9fa' }}>
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               To
             </div>
