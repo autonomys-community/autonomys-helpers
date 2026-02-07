@@ -197,8 +197,8 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
         </div>
 
         {/* From → To */}
-        <div className="row g-2 mb-2 align-items-start">
-          <div className="col-md">
+        <div className="row g-0 mb-2 align-items-center">
+          <div className="col-12 col-md-5">
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               From
             </div>
@@ -233,19 +233,19 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
               )}
             </div>
           </div>
-          <div className="col-12 col-md-auto d-flex align-items-center justify-content-center py-1 py-md-0" style={{ marginTop: '0.75rem' }}>
+          <div className="col-12 col-md-2 d-flex align-items-center justify-content-center py-1 py-md-0">
             {/* Right arrow on md+ screens */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted d-none d-md-block">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted d-none d-md-block">
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />
             </svg>
             {/* Down arrow on small screens */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted d-md-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted d-md-none">
               <line x1="12" y1="5" x2="12" y2="19" />
               <polyline points="19 12 12 19 5 12" />
             </svg>
           </div>
-          <div className="col-md">
+          <div className="col-12 col-md-5">
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               To
             </div>
