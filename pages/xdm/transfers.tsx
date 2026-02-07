@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
 import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
 import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
-import { fetchTransferTimestamps } from '../../utils/fetchTimestamps';
+import { fetchTransferTimestamps, transferTimestampKey } from '../../utils/fetchTimestamps';
 import { NETWORKS, NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
@@ -24,6 +24,52 @@ export default function TransfersPage() {
   const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // Sort transfers by timestamp (newest first) once timestamps are available,
+  // falling back to nonce order until then.
+  // ---------------------------------------------------------------------------
+  const sortedTransfers = useMemo(() => {
+    if (timestamps.size === 0) return transfers;
+    return [...transfers].sort((a, b) => {
+      const tsA = timestamps.get(transferTimestampKey(a));
+      const tsB = timestamps.get(transferTimestampKey(b));
+      if (tsA && tsB) return tsB.getTime() - tsA.getTime();
+      if (tsA && !tsB) return -1; // timestamped items before non-timestamped
+      if (!tsA && tsB) return 1;
+      return parseInt(b.nonce, 10) - parseInt(a.nonce, 10);
+    });
+  }, [transfers, timestamps]);
+
+  // ---------------------------------------------------------------------------
+  // Fade transition: briefly hide the list when the sort order changes so
+  // the re-ordering isn't jarring.
+  // ---------------------------------------------------------------------------
+  const hadTimestamps = useRef(false);
+  const [listOpacity, setListOpacity] = useState(1);
+
+  useLayoutEffect(() => {
+    if (timestamps.size === 0) {
+      hadTimestamps.current = false;
+      return;
+    }
+    if (!hadTimestamps.current && transfers.length > 1) {
+      hadTimestamps.current = true;
+      setListOpacity(0);
+    }
+  }, [timestamps, transfers]);
+
+  useEffect(() => {
+    if (listOpacity === 0) {
+      // Double rAF: the first frame lets the browser paint at opacity 0,
+      // the second frame triggers the CSS transition to opacity 1.
+      let rafId: number;
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => setListOpacity(1));
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [listOpacity]);
 
   const loadTimestamps = useCallback(
     async (network: NetworkType, data: XdmTransfer[]) => {
@@ -352,14 +398,16 @@ export default function TransfersPage() {
               )}
             </div>
           )}
-          <TransferList
-            transfers={transfers}
-            searchAddress={submittedAddress}
-            progress={progress}
-            timestamps={timestamps}
-            network={selectedNetwork}
-            onSearchAddress={searchFor}
-          />
+          <div style={{ opacity: listOpacity, transition: 'opacity 0.3s ease' }}>
+            <TransferList
+              transfers={sortedTransfers}
+              searchAddress={submittedAddress}
+              progress={progress}
+              timestamps={timestamps}
+              network={selectedNetwork}
+              onSearchAddress={searchFor}
+            />
+          </div>
         </>
       )}
 
