@@ -102,12 +102,12 @@ const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, p
           )}
         </button>
       </div>
-      {transfers.map((transfer, index) => (
+      {transfers.map((transfer) => (
         <TransferCard
-          key={transferKey(transfer, index)}
+          key={transferKey(transfer)}
           transfer={transfer}
           searchAddress={searchAddress}
-          progress={progress?.get(transferKey(transfer, index))}
+          progress={progress?.get(transferKey(transfer))}
           initiatedAt={timestamps?.get(transferTimestampKey(transfer))}
           network={network}
           onSearchAddress={onSearchAddress}
