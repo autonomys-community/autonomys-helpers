@@ -46,6 +46,22 @@ export function getAddressExplorerUrl(
   return `${config.explorers.consensus}/account/${address}`;
 }
 
+/**
+ * Build an explorer URL for a block number.
+ * Consensus blocks go to Subscan, domain blocks go to Blockscout.
+ */
+export function getBlockExplorerUrl(
+  network: NetworkType,
+  blockNumber: number,
+  chain: string
+): string {
+  const config = NETWORKS[network];
+  if (chain === 'Consensus') {
+    return `${config.explorers.consensus}/block/${blockNumber}`;
+  }
+  return `${config.explorers.autoEvm}/block/${blockNumber}`;
+}
+
 // XDM confirmation depths in domain blocks
 export const CONSENSUS_TO_DOMAIN_DEPTH = 100;
 export const DOMAIN_TO_CONSENSUS_DEPTH = 14_400;

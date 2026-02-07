@@ -5,12 +5,11 @@ import {
   getTransferStatus,
   formatChainName,
   formatAmount,
-  truncateHash,
   truncateAddress,
 } from '../utils/fetchTransfers';
 import { TransferProgress, ProgressEntry } from '../utils/fetchTransferProgress';
 import { formatTimeAgo } from '../utils/fetchTimestamps';
-import { getAddressExplorerUrl, NetworkType } from '../config/networks';
+import { getAddressExplorerUrl, getBlockExplorerUrl, NetworkType } from '../config/networks';
 import CopyableText from './CopyableText';
 
 interface TransferCardProps {
@@ -312,36 +311,54 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
 
         <details className="mt-2">
           <summary className="small text-muted" style={{ cursor: 'pointer' }}>
-            <span className="ms-1">Details &middot; Nonce {transfer.nonce} &middot; Channel {transfer.channel_id}</span>
+            <span className="ms-1">Details</span>
           </summary>
           <div className="mt-2 ms-3 small">
-            {transfer.initiated_src_block && (
-              <div className="mb-1">
-                <strong>Initiated:</strong> Block #{transfer.initiated_src_block.block_number.toLocaleString()}
-                <br />
-                <span className="text-muted" title={transfer.initiated_src_block.block_hash}>
-                  {truncateHash(transfer.initiated_src_block.block_hash)}
-                </span>
-              </div>
-            )}
-            {transfer.executed_dst_block && (
-              <div className="mb-1">
-                <strong>Executed:</strong> Block #{transfer.executed_dst_block.block_number.toLocaleString()}
-                <br />
-                <span className="text-muted" title={transfer.executed_dst_block.block_hash}>
-                  {truncateHash(transfer.executed_dst_block.block_hash)}
-                </span>
-              </div>
-            )}
-            {transfer.acknowledged_src_block && (
-              <div className="mb-1">
-                <strong>Acknowledged:</strong> Block #{transfer.acknowledged_src_block.block_number.toLocaleString()}
-                <br />
-                <span className="text-muted" title={transfer.acknowledged_src_block.block_hash}>
-                  {truncateHash(transfer.acknowledged_src_block.block_hash)}
-                </span>
-              </div>
-            )}
+            <div className="border rounded p-2 mb-2" style={{ backgroundColor: '#f8f9fa' }}>
+              <div className="mb-1"><strong>Nonce:</strong> {transfer.nonce}</div>
+              <div><strong>Channel:</strong> {transfer.channel_id}</div>
+            </div>
+            <div className="border rounded p-2" style={{ backgroundColor: '#f0f6ff' }}>
+              {transfer.initiated_src_block && (
+                <div className="mb-1">
+                  <strong>Initiated:</strong>{' '}
+                  <a
+                    href={getBlockExplorerUrl(network as NetworkType, transfer.initiated_src_block.block_number, transfer.src_chain)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-decoration-none"
+                  >
+                    Block #{transfer.initiated_src_block.block_number.toLocaleString()}
+                  </a>
+                </div>
+              )}
+              {transfer.executed_dst_block && (
+                <div className="mb-1">
+                  <strong>Executed:</strong>{' '}
+                  <a
+                    href={getBlockExplorerUrl(network as NetworkType, transfer.executed_dst_block.block_number, transfer.dst_chain)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-decoration-none"
+                  >
+                    Block #{transfer.executed_dst_block.block_number.toLocaleString()}
+                  </a>
+                </div>
+              )}
+              {transfer.acknowledged_src_block && (
+                <div>
+                  <strong>Acknowledged:</strong>{' '}
+                  <a
+                    href={getBlockExplorerUrl(network as NetworkType, transfer.acknowledged_src_block.block_number, transfer.src_chain)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-decoration-none"
+                  >
+                    Block #{transfer.acknowledged_src_block.block_number.toLocaleString()}
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </details>
       </Card.Body>
