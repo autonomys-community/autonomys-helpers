@@ -202,7 +202,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               From
             </div>
-            <div className="fw-semibold small">{formatChainName(transfer.src_chain)}</div>
+            <div className="fw-semibold" style={{ fontSize: '1.2rem' }}>{formatChainName(transfer.src_chain)}</div>
             <div className="d-flex align-items-center gap-1">
               <a
                 href={getAddressExplorerUrl(network as NetworkType, transfer.sender, transfer.src_chain)}
@@ -249,7 +249,7 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             <div className="text-muted mb-1" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               To
             </div>
-            <div className="fw-semibold small">{formatChainName(transfer.dst_chain)}</div>
+            <div className="fw-semibold" style={{ fontSize: '1.2rem' }}>{formatChainName(transfer.dst_chain)}</div>
             <div className="d-flex align-items-center gap-1">
               <a
                 href={getAddressExplorerUrl(network as NetworkType, transfer.receiver, transfer.dst_chain)}
