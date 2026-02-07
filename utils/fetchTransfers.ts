@@ -39,7 +39,8 @@ export async function fetchTransfers(
   }
 
   const data: XdmTransfer[] = await response.json();
-  // Sort by nonce descending so the latest transfer is always first
+  // Initial sort by nonce descending. The page re-sorts by on-chain timestamp
+  // once timestamps have loaded (see sortedTransfers in transfers.tsx).
   data.sort((a, b) => parseInt(b.nonce, 10) - parseInt(a.nonce, 10));
   return data;
 }

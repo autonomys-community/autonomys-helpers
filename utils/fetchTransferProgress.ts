@@ -22,8 +22,8 @@ export interface TransferProgress {
 }
 
 /** Build a unique key for a transfer to use in the progress map. */
-export function transferKey(transfer: XdmTransfer, index: number): string {
-  return `${transfer.channel_id}-${transfer.nonce}-${transfer.src_chain}-${index}`;
+export function transferKey(transfer: XdmTransfer): string {
+  return `${transfer.channel_id}-${transfer.nonce}-${transfer.src_chain}`;
 }
 
 /** Extract the domain ID from a chain string like "Domain(0)". Returns null for Consensus. */
@@ -98,7 +98,7 @@ export async function fetchTransferProgress(
 
     // Initialise progress entries for each in-flight transfer
     for (const { transfer, index } of inFlight) {
-      const key = transferKey(transfer, index);
+      const key = transferKey(transfer);
       const isPending = !transfer.executed_dst_block;
       const isFromConsensus = transfer.src_chain === 'Consensus';
 
