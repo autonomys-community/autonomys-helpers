@@ -3,8 +3,9 @@ import { useRouter } from 'next/router';
 import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
-import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
-import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
+import TransferCard from '../../components/TransferCard';
+import { fetchTransfers, fetchRecentTransfers, XdmTransfer } from '../../utils/fetchTransfers';
+import { fetchTransferProgress, TransferProgress, transferKey } from '../../utils/fetchTransferProgress';
 import { NETWORKS, NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
@@ -22,6 +23,10 @@ export default function TransfersPage() {
   const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Recent transfers (shown when no search is active)
+  const [recentTransfers, setRecentTransfers] = useState<XdmTransfer[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const loadProgress = useCallback(
     async (network: NetworkType, data: XdmTransfer[]) => {
@@ -218,6 +223,18 @@ export default function TransfersPage() {
     }
   }, [router.isReady, router.query, loadProgress]);
 
+  // Fetch recent network-wide transfers on mount and when network changes
+  useEffect(() => {
+    setRecentLoading(true);
+    fetchRecentTransfers(selectedNetwork)
+      .then(setRecentTransfers)
+      .catch((err) => {
+        console.error('Error fetching recent transfers:', err);
+        setRecentTransfers([]);
+      })
+      .finally(() => setRecentLoading(false));
+  }, [selectedNetwork]);
+
   return (
     <div className="container py-3 py-md-5">
       <h1 className="fs-3 fs-md-1">XDM Transfer Status</h1>
@@ -338,21 +355,49 @@ export default function TransfersPage() {
       )}
 
       {!hasSearched && (
-        <div className="border rounded p-4 text-center bg-light">
-          <h5 className="text-muted">XDM Transfer Lookup</h5>
-          <p className="text-muted mb-3">
-            Enter your wallet address above and click Search to view your cross-domain transfers.
-          </p>
-          <div className="small text-muted">
-            <strong>Confirmation Times:</strong>
-            <br />
-            Consensus &rarr; Domain: ~10 minutes (100 domain blocks)
-            <br />
-            Domain &rarr; Consensus: ~1 day (14,400 domain blocks)
-            <br />
-            Domain &rarr; Domain: ~1 day (14,400 domain blocks)
+        <>
+          <div className="border rounded p-4 text-center bg-light">
+            <h5 className="text-muted">XDM Transfer Lookup</h5>
+            <p className="text-muted mb-3">
+              Enter your wallet address above and click Search to view your cross-domain transfers.
+            </p>
+            <div className="small text-muted">
+              <strong>Confirmation Times:</strong>
+              <br />
+              Consensus &rarr; Domain: ~10 minutes (100 domain blocks)
+              <br />
+              Domain &rarr; Consensus: ~1 day (14,400 domain blocks)
+              <br />
+              Domain &rarr; Domain: ~1 day (14,400 domain blocks)
+            </div>
           </div>
-        </div>
+
+          <div className="mt-4">
+            <h5 className="text-muted mb-3">Recent Transfers</h5>
+            {recentLoading && (
+              <div className="text-center py-4">
+                <Spinner animation="border" role="status" variant="secondary" size="sm" />
+                <span className="ms-2 text-muted small">Loading recent transfers...</span>
+              </div>
+            )}
+            {!recentLoading && recentTransfers.length === 0 && (
+              <div className="text-center text-muted py-3 small">
+                No recent transfers found.
+              </div>
+            )}
+            {!recentLoading && recentTransfers.map((transfer) => (
+              <TransferCard
+                key={transferKey(transfer)}
+                transfer={transfer}
+                initiatedAt={transfer.initiated_src_block?.block_time
+                  ? new Date(transfer.initiated_src_block.block_time)
+                  : undefined}
+                network={selectedNetwork}
+                onSearchAddress={searchFor}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

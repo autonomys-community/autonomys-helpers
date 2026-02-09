@@ -53,6 +53,24 @@ export async function fetchTransfers(
   return data;
 }
 
+/**
+ * Fetch the most recent XDM transfers across the network (not address-specific).
+ * Returns up to `limit` transfers (max 10), sorted newest-first by the API.
+ */
+export async function fetchRecentTransfers(
+  network: NetworkType,
+  limit: number = 10
+): Promise<XdmTransfer[]> {
+  const url = `${NETWORKS[network].indexer}/recent?limit=${Math.min(limit, 10)}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch recent transfers: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
 export function getTransferStatus(transfer: XdmTransfer): {
   label: string;
   variant: string;

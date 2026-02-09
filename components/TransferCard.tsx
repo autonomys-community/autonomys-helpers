@@ -14,7 +14,7 @@ import CopyableText from './CopyableText';
 
 interface TransferCardProps {
   transfer: XdmTransfer;
-  searchAddress: string;
+  searchAddress?: string;
   progress?: TransferProgress;
   initiatedAt?: Date;
   network: string;
@@ -152,9 +152,10 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, progress, initiatedAt, network, onSearchAddress }) => {
   const status = getTransferStatus(transfer);
-  const isSender =
-    transfer.sender.toLowerCase() === searchAddress.toLowerCase();
-  const counterpart = isSender ? transfer.receiver : transfer.sender;
+  const hasSearch = !!searchAddress;
+  const isSender = hasSearch
+    ? transfer.sender.toLowerCase() === searchAddress!.toLowerCase()
+    : false;
 
   // Tokens are available once the transfer has been executed on the destination
   const tokensAvailable = !!transfer.executed_dst_block;
@@ -173,14 +174,16 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
             <span className="fw-semibold small" style={{ color: statusColor }}>
               {status.label}
             </span>
-            <Badge
-              pill
-              bg={isSender ? 'primary' : 'secondary'}
-              className="opacity-75"
-              style={{ fontSize: '0.7rem' }}
-            >
-              {isSender ? 'Sent' : 'Received'}
-            </Badge>
+            {hasSearch && (
+              <Badge
+                pill
+                bg={isSender ? 'primary' : 'secondary'}
+                className="opacity-75"
+                style={{ fontSize: '0.7rem' }}
+              >
+                {isSender ? 'Sent' : 'Received'}
+              </Badge>
+            )}
           </div>
           {initiatedAt && (
             <span className="text-muted small" title={initiatedAt.toLocaleString()}>
@@ -217,12 +220,12 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
                 displayText=""
                 className="small"
               />
-              {!isSender && onSearchAddress && (
+              {(!hasSearch || !isSender) && onSearchAddress && (
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 border-0"
-                  onClick={() => onSearchAddress(counterpart)}
-                  title={`Search transfers for ${truncateAddress(counterpart)}`}
+                  onClick={() => onSearchAddress(transfer.sender)}
+                  title={`Search transfers for ${truncateAddress(transfer.sender)}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
@@ -264,12 +267,12 @@ const TransferCard: React.FC<TransferCardProps> = ({ transfer, searchAddress, pr
                 displayText=""
                 className="small"
               />
-              {isSender && onSearchAddress && (
+              {(!hasSearch || isSender) && onSearchAddress && (
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 border-0"
-                  onClick={() => onSearchAddress(counterpart)}
-                  title={`Search transfers for ${truncateAddress(counterpart)}`}
+                  onClick={() => onSearchAddress(transfer.receiver)}
+                  title={`Search transfers for ${truncateAddress(transfer.receiver)}`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
