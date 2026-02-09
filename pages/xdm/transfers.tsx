@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { Form, Button, Spinner, Alert } from 'react-bootstrap';
 import TransferList from '../../components/TransferList';
 import NetworkSelector from '../../components/NetworkSelector';
-import { fetchTransfers, XdmTransfer } from '../../utils/fetchTransfers';
-import { fetchTransferProgress, TransferProgress } from '../../utils/fetchTransferProgress';
-import { fetchTransferTimestamps, transferTimestampKey } from '../../utils/fetchTimestamps';
+import TransferCard from '../../components/TransferCard';
+import { fetchTransfers, fetchRecentTransfers, XdmTransfer } from '../../utils/fetchTransfers';
+import { fetchTransferProgress, TransferProgress, transferKey } from '../../utils/fetchTransferProgress';
 import { NETWORKS, NetworkType } from '../../config/networks';
 
 export default function TransfersPage() {
@@ -18,75 +18,15 @@ export default function TransfersPage() {
   const [submittedAddress, setSubmittedAddress] = useState('');
   const [transfers, setTransfers] = useState<XdmTransfer[]>([]);
   const [progress, setProgress] = useState<Map<string, TransferProgress>>(new Map());
-  const [timestamps, setTimestamps] = useState<Map<string, Date>>(new Map());
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [progressLoading, setProgressLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // Sort transfers by timestamp (newest first) once timestamps are available,
-  // falling back to nonce order until then.
-  // ---------------------------------------------------------------------------
-  const sortedTransfers = useMemo(() => {
-    if (timestamps.size === 0) return transfers;
-    return [...transfers].sort((a, b) => {
-      const tsA = timestamps.get(transferTimestampKey(a));
-      const tsB = timestamps.get(transferTimestampKey(b));
-      if (tsA && tsB) return tsB.getTime() - tsA.getTime();
-      if (tsA && !tsB) return -1; // timestamped items before non-timestamped
-      if (!tsA && tsB) return 1;
-      return parseInt(b.nonce, 10) - parseInt(a.nonce, 10);
-    });
-  }, [transfers, timestamps]);
-
-  // ---------------------------------------------------------------------------
-  // Fade transition: briefly hide the list when the sort order changes so
-  // the re-ordering isn't jarring.
-  // ---------------------------------------------------------------------------
-  const hadTimestamps = useRef(false);
-  const [listOpacity, setListOpacity] = useState(1);
-
-  useLayoutEffect(() => {
-    if (timestamps.size === 0) {
-      hadTimestamps.current = false;
-      return;
-    }
-    if (!hadTimestamps.current && transfers.length > 1) {
-      hadTimestamps.current = true;
-      setListOpacity(0);
-    }
-  }, [timestamps, transfers]);
-
-  useEffect(() => {
-    if (listOpacity === 0) {
-      // Double rAF: the first frame lets the browser paint at opacity 0,
-      // the second frame triggers the CSS transition to opacity 1.
-      let rafId: number;
-      rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(() => setListOpacity(1));
-      });
-      return () => cancelAnimationFrame(rafId);
-    }
-  }, [listOpacity]);
-
-  const loadTimestamps = useCallback(
-    async (network: NetworkType, data: XdmTransfer[]) => {
-      if (data.length === 0) {
-        setTimestamps(new Map());
-        return;
-      }
-      try {
-        const ts = await fetchTransferTimestamps(network, data);
-        setTimestamps(ts);
-      } catch (err) {
-        console.error('Error fetching timestamps:', err);
-        // Non-critical: transfers still display without timestamps
-      }
-    },
-    []
-  );
+  // Recent transfers (shown when no search is active)
+  const [recentTransfers, setRecentTransfers] = useState<XdmTransfer[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
 
   const loadProgress = useCallback(
     async (network: NetworkType, data: XdmTransfer[]) => {
@@ -119,14 +59,12 @@ export default function TransfersPage() {
       setHasSearched(true);
       setSubmittedAddress(newAddress);
       setProgress(new Map());
-      setTimestamps(new Map());
 
       fetchTransfers(selectedNetwork, newAddress)
         .then((data) => {
           setTransfers(data);
           setLoading(false);
           loadProgress(selectedNetwork, data);
-          loadTimestamps(selectedNetwork, data);
         })
         .catch((err) => {
           console.error('Error fetching transfers:', err);
@@ -139,7 +77,7 @@ export default function TransfersPage() {
           setLoading(false);
         });
     },
-    [selectedNetwork, loadProgress, loadTimestamps]
+    [selectedNetwork, loadProgress]
   );
 
   const handleSearch = useCallback(
@@ -159,9 +97,8 @@ export default function TransfersPage() {
         const data = await fetchTransfers(selectedNetwork, trimmed);
         setTransfers(data);
         setLoading(false);
-        // Fetch progress and timestamps in the background after transfers are displayed
+        // Fetch progress in the background after transfers are displayed
         loadProgress(selectedNetwork, data);
-        loadTimestamps(selectedNetwork, data);
       } catch (err) {
         console.error('Error fetching transfers:', err);
         setError(
@@ -173,7 +110,7 @@ export default function TransfersPage() {
         setLoading(false);
       }
     },
-    [address, selectedNetwork, loadProgress, loadTimestamps]
+    [address, selectedNetwork, loadProgress]
   );
 
   const handleNetworkChange = useCallback(
@@ -184,13 +121,11 @@ export default function TransfersPage() {
         setLoading(true);
         setError(null);
         setProgress(new Map());
-        setTimestamps(new Map());
         fetchTransfers(network, submittedAddress)
           .then((data) => {
             setTransfers(data);
             setLoading(false);
             loadProgress(network, data);
-            loadTimestamps(network, data);
           })
           .catch((err) => {
             console.error('Error fetching transfers:', err);
@@ -204,7 +139,7 @@ export default function TransfersPage() {
           });
       }
     },
-    [submittedAddress, loadProgress, loadTimestamps]
+    [submittedAddress, loadProgress]
   );
 
   // Auto-refresh every 30s when there are in-flight transfers
@@ -274,7 +209,6 @@ export default function TransfersPage() {
           setTransfers(data);
           setLoading(false);
           loadProgress(network, data);
-          loadTimestamps(network, data);
         })
         .catch((err) => {
           console.error('Error fetching transfers:', err);
@@ -287,7 +221,19 @@ export default function TransfersPage() {
           setLoading(false);
         });
     }
-  }, [router.isReady, router.query, loadProgress, loadTimestamps]);
+  }, [router.isReady, router.query, loadProgress]);
+
+  // Fetch recent network-wide transfers on mount and when network changes
+  useEffect(() => {
+    setRecentLoading(true);
+    fetchRecentTransfers(selectedNetwork)
+      .then(setRecentTransfers)
+      .catch((err) => {
+        console.error('Error fetching recent transfers:', err);
+        setRecentTransfers([]);
+      })
+      .finally(() => setRecentLoading(false));
+  }, [selectedNetwork]);
 
   return (
     <div className="container py-3 py-md-5">
@@ -398,35 +344,60 @@ export default function TransfersPage() {
               )}
             </div>
           )}
-          <div style={{ opacity: listOpacity, transition: 'opacity 0.3s ease' }}>
-            <TransferList
-              transfers={sortedTransfers}
-              searchAddress={submittedAddress}
-              progress={progress}
-              timestamps={timestamps}
-              network={selectedNetwork}
-              onSearchAddress={searchFor}
-            />
-          </div>
+          <TransferList
+            transfers={transfers}
+            searchAddress={submittedAddress}
+            progress={progress}
+            network={selectedNetwork}
+            onSearchAddress={searchFor}
+          />
         </>
       )}
 
       {!hasSearched && (
-        <div className="border rounded p-4 text-center bg-light">
-          <h5 className="text-muted">XDM Transfer Lookup</h5>
-          <p className="text-muted mb-3">
-            Enter your wallet address above and click Search to view your cross-domain transfers.
-          </p>
-          <div className="small text-muted">
-            <strong>Confirmation Times:</strong>
-            <br />
-            Consensus &rarr; Domain: ~10 minutes (100 domain blocks)
-            <br />
-            Domain &rarr; Consensus: ~1 day (14,400 domain blocks)
-            <br />
-            Domain &rarr; Domain: ~1 day (14,400 domain blocks)
+        <>
+          <div className="border rounded p-4 text-center bg-light">
+            <h5 className="text-muted">XDM Transfer Lookup</h5>
+            <p className="text-muted mb-3">
+              Enter your wallet address above and click Search to view your cross-domain transfers.
+            </p>
+            <div className="small text-muted">
+              <strong>Confirmation Times:</strong>
+              <br />
+              Consensus &rarr; Domain: ~10 minutes (100 domain blocks)
+              <br />
+              Domain &rarr; Consensus: ~1 day (14,400 domain blocks)
+              <br />
+              Domain &rarr; Domain: ~1 day (14,400 domain blocks)
+            </div>
           </div>
-        </div>
+
+          <div className="mt-4">
+            <h5 className="text-muted mb-3">Recent Transfers</h5>
+            {recentLoading && (
+              <div className="text-center py-4">
+                <Spinner animation="border" role="status" variant="secondary" size="sm" />
+                <span className="ms-2 text-muted small">Loading recent transfers...</span>
+              </div>
+            )}
+            {!recentLoading && recentTransfers.length === 0 && (
+              <div className="text-center text-muted py-3 small">
+                No recent transfers found.
+              </div>
+            )}
+            {!recentLoading && recentTransfers.map((transfer) => (
+              <TransferCard
+                key={transferKey(transfer)}
+                transfer={transfer}
+                initiatedAt={transfer.initiated_src_block?.block_time
+                  ? new Date(transfer.initiated_src_block.block_time)
+                  : undefined}
+                network={selectedNetwork}
+                onSearchAddress={searchFor}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -2,19 +2,17 @@ import React, { useState, useCallback } from 'react';
 import TransferCard from './TransferCard';
 import { XdmTransfer } from '../utils/fetchTransfers';
 import { TransferProgress, transferKey } from '../utils/fetchTransferProgress';
-import { transferTimestampKey } from '../utils/fetchTimestamps';
 import { NetworkType } from '../config/networks';
 
 interface TransferListProps {
   transfers: XdmTransfer[];
   searchAddress: string;
   progress?: Map<string, TransferProgress>;
-  timestamps?: Map<string, Date>;
   network: NetworkType;
   onSearchAddress?: (address: string) => void;
 }
 
-const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, timestamps, network, onSearchAddress }) => {
+const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, progress, network, onSearchAddress }) => {
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
@@ -108,7 +106,9 @@ const TransferList: React.FC<TransferListProps> = ({ transfers, searchAddress, p
           transfer={transfer}
           searchAddress={searchAddress}
           progress={progress?.get(transferKey(transfer))}
-          initiatedAt={timestamps?.get(transferTimestampKey(transfer))}
+          initiatedAt={transfer.initiated_src_block?.block_time
+            ? new Date(transfer.initiated_src_block.block_time)
+            : undefined}
           network={network}
           onSearchAddress={onSearchAddress}
         />

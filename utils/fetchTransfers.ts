@@ -1,6 +1,7 @@
 export interface BlockInfo {
   block_number: number;
   block_hash: string;
+  block_time?: string; // ISO 8601 timestamp, e.g. "2026-02-06T16:18:09.675Z"
 }
 
 export interface XdmTransfer {
@@ -39,10 +40,35 @@ export async function fetchTransfers(
   }
 
   const data: XdmTransfer[] = await response.json();
-  // Initial sort by nonce descending. The page re-sorts by on-chain timestamp
-  // once timestamps have loaded (see sortedTransfers in transfers.tsx).
-  data.sort((a, b) => parseInt(b.nonce, 10) - parseInt(a.nonce, 10));
+  // Sort by initiation timestamp descending (newest first).
+  // Falls back to nonce order when timestamps are unavailable.
+  data.sort((a, b) => {
+    const tsA = a.initiated_src_block?.block_time;
+    const tsB = b.initiated_src_block?.block_time;
+    if (tsA && tsB) return new Date(tsB).getTime() - new Date(tsA).getTime();
+    if (tsA && !tsB) return -1;
+    if (!tsA && tsB) return 1;
+    return parseInt(b.nonce, 10) - parseInt(a.nonce, 10);
+  });
   return data;
+}
+
+/**
+ * Fetch the most recent XDM transfers across the network (not address-specific).
+ * Returns up to `limit` transfers (max 10), sorted newest-first by the API.
+ */
+export async function fetchRecentTransfers(
+  network: NetworkType,
+  limit: number = 10
+): Promise<XdmTransfer[]> {
+  const url = `${NETWORKS[network].indexer}/recent?limit=${Math.min(limit, 10)}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch recent transfers: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 export function getTransferStatus(transfer: XdmTransfer): {
@@ -122,4 +148,27 @@ export function truncateAddress(address: string, chars: number = 8): string {
     return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
   }
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+}
+
+/** Format a Date as a human-readable relative time string. */
+export function formatTimeAgo(date: Date): string {
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+
+  if (diffMs < 0) return 'just now';
+
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
 }
