@@ -6,9 +6,9 @@ import {
   formatChainName,
   formatAmount,
   truncateAddress,
+  formatTimeAgo,
 } from '../utils/fetchTransfers';
 import { TransferProgress, ProgressEntry } from '../utils/fetchTransferProgress';
-import { formatTimeAgo } from '../utils/fetchTimestamps';
 import { getAddressExplorerUrl, getBlockExplorerUrl, NetworkType } from '../config/networks';
 import CopyableText from './CopyableText';
 
