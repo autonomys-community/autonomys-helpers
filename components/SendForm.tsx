@@ -46,6 +46,14 @@ const SendForm: React.FC<SendFormProps> = ({
     ? `~10 minutes (${CONSENSUS_TO_DOMAIN_DEPTH} domain blocks)`
     : `~1 day (${DOMAIN_TO_CONSENSUS_DEPTH.toLocaleString()} domain blocks)`;
 
+  // Reset form fields when direction or network changes
+  useEffect(() => {
+    setRecipient('');
+    setAmount('');
+    setValidationError(null);
+    setBalance(null);
+  }, [direction, network]);
+
   // Fetch balance when sender address changes
   useEffect(() => {
     if (!senderAddress) {
