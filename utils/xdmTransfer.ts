@@ -2,7 +2,7 @@ import { activate, disconnect, ai3ToShannons } from '@autonomys/auto-utils';
 import { transporterTransfer, transferToConsensus } from '@autonomys/auto-xdm';
 import type { InjectedExtension } from '@polkadot/extension-inject/types';
 import { decodeAddress } from '@polkadot/keyring';
-import { isAddress as isValidEthersAddress, getAddress } from 'ethers';
+import { isAddress as isValidEthersAddress } from 'ethers';
 import type { JsonRpcSigner, BrowserProvider } from 'ethers';
 import type { NetworkType } from '../config/networks';
 import { NETWORKS } from '../config/networks';
@@ -51,8 +51,17 @@ export async function transferConsensusToEvm(params: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await new Promise<TransferResult>((resolve, reject) => {
       let settled = false;
-      const safeResolve = (v: TransferResult) => { if (!settled) { settled = true; resolve(v); } };
-      const safeReject = (e: unknown) => { if (!settled) { settled = true; reject(e); } };
+      let unsub: (() => void) | undefined;
+
+      const cleanup = () => {
+        if (unsub) { try { unsub(); } catch { /* ignore */ } }
+      };
+      const safeResolve = (v: TransferResult) => {
+        if (!settled) { settled = true; cleanup(); resolve(v); }
+      };
+      const safeReject = (e: unknown) => {
+        if (!settled) { settled = true; cleanup(); reject(e); }
+      };
 
       try {
         const outerPromise = tx.signAndSend(
@@ -71,10 +80,13 @@ export async function transferConsensusToEvm(params: {
             }
           },
         );
-        // The outer promise rejects when the wallet denies the signing request.
-        // Attach .catch so this rejection settles our wrapper promise.
-        if (outerPromise && typeof (outerPromise as any).catch === 'function') {
-          (outerPromise as any).catch(safeReject);
+        // The outer promise resolves to an unsubscribe fn on success,
+        // but rejects if the wallet denies the signing request.
+        if (outerPromise && typeof (outerPromise as any).then === 'function') {
+          (outerPromise as any).then(
+            (fn: unknown) => { if (typeof fn === 'function') unsub = fn as () => void; },
+            safeReject,
+          );
         }
       } catch (err) {
         // Synchronous throw from signAndSend (some extension implementations)
@@ -153,17 +165,6 @@ export async function getEvmBalance(provider: BrowserProvider, address: string):
  */
 export function isValidEvmAddress(addr: string): boolean {
   return isValidEthersAddress(addr);
-}
-
-/**
- * Return the EIP-55 checksummed version of an EVM address, or null if invalid.
- */
-export function checksumEvmAddress(addr: string): string | null {
-  try {
-    return getAddress(addr);
-  } catch {
-    return null;
-  }
 }
 
 export function isValidSubstrateAddress(addr: string): boolean {

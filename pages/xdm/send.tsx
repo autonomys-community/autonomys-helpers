@@ -164,7 +164,7 @@ export default function SendPage() {
       <SendForm
         direction={direction}
         network={selectedNetwork}
-        senderAddress={isEvmWrongChain ? null : senderAddress}
+        senderAddress={!isConsensusToEvm && isEvmWrongChain ? null : senderAddress}
         evmProvider={evmWallet.provider}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
