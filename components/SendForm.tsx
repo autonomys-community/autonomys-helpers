@@ -104,7 +104,7 @@ const SendForm: React.FC<SendFormProps> = ({
     if (!amount.trim()) return 'Amount is required.';
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return 'Amount must be greater than 0.';
-    if (numAmount < 0.0001) return 'Amount is below the minimum transfer amount.';
+    if (numAmount < 1) return 'Minimum XDM transfer amount is 1 AI3.';
 
     if (balance !== null) {
       const balNum = parseFloat(balance);
