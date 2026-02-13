@@ -77,7 +77,12 @@ export default function SendPage() {
       router.push(`/xdm/transfers?search=${encodeURIComponent(searchAddr)}&network=${selectedNetwork}`);
     } catch (err) {
       console.error('Transfer failed:', err);
-      const message = err instanceof Error ? err.message : 'Transfer failed. Please try again.';
+      const raw = err instanceof Error ? err.message : String(err);
+      // Detect user rejection from wallet
+      const isRejected = /user rejected|cancelled|action_rejected|rejected by user/i.test(raw);
+      const message = isRejected
+        ? 'Transaction was rejected in your wallet.'
+        : raw || 'Transfer failed. Please try again.';
       setSubmitError(message);
     } finally {
       setIsSubmitting(false);

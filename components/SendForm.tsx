@@ -119,7 +119,12 @@ const SendForm: React.FC<SendFormProps> = ({
 
   const handleConfirm = useCallback(async () => {
     setShowConfirm(false);
-    await onSubmit(recipient.trim(), amount.trim());
+    try {
+      await onSubmit(recipient.trim(), amount.trim());
+    } catch {
+      // Error is handled by the parent via submitError prop;
+      // catch here to prevent unhandled promise rejection.
+    }
   }, [onSubmit, recipient, amount]);
 
   const handleSetMax = useCallback(() => {
