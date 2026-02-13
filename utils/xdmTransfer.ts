@@ -1,6 +1,8 @@
 import { activate, disconnect, ai3ToShannons } from '@autonomys/auto-utils';
 import { transporterTransfer, transferToConsensus } from '@autonomys/auto-xdm';
 import type { InjectedExtension } from '@polkadot/extension-inject/types';
+import { decodeAddress } from '@polkadot/keyring';
+import { isAddress as isValidEthersAddress, getAddress } from 'ethers';
 import type { JsonRpcSigner, BrowserProvider } from 'ethers';
 import type { NetworkType } from '../config/networks';
 import { NETWORKS } from '../config/networks';
@@ -147,17 +149,28 @@ export async function getEvmBalance(provider: BrowserProvider, address: string):
 }
 
 /**
- * Basic address format validation.
+ * Validate an EVM address using ethers.js (includes EIP-55 checksum validation).
  */
 export function isValidEvmAddress(addr: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr);
+  return isValidEthersAddress(addr);
+}
+
+/**
+ * Return the EIP-55 checksummed version of an EVM address, or null if invalid.
+ */
+export function checksumEvmAddress(addr: string): string | null {
+  try {
+    return getAddress(addr);
+  } catch {
+    return null;
+  }
 }
 
 export function isValidSubstrateAddress(addr: string): boolean {
-  // Substrate addresses are base58 encoded, typically 46-48 chars
-  // Starting with a character (not 0x)
-  if (addr.startsWith('0x')) return false;
-  if (addr.length < 40 || addr.length > 60) return false;
-  // Basic base58 character check
-  return /^[1-9A-HJ-NP-Za-km-z]+$/.test(addr);
+  try {
+    decodeAddress(addr);
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -93,7 +93,7 @@ const SendForm: React.FC<SendFormProps> = ({
 
     if (isConsensusToEvm) {
       if (!isValidEvmAddress(recipient.trim())) {
-        return 'Invalid EVM address. Must be 0x followed by 40 hex characters.';
+        return 'Invalid EVM address. Please enter a valid checksummed address (0x…).';
       }
     } else {
       if (!isValidSubstrateAddress(recipient.trim())) {
