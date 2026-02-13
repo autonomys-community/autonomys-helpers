@@ -1,10 +1,14 @@
 export const NETWORKS = {
   mainnet: {
     name: 'Mainnet',
+    networkId: 'mainnet' as const,
     rpc: {
       consensus: 'wss://rpc.mainnet.subspace.foundation/ws',
       autoEvm: 'wss://auto-evm.mainnet.autonomys.xyz/ws',
     },
+    evmRpcHttp: 'https://auto-evm.mainnet.autonomys.xyz/ws',
+    evmChainId: 870,
+    domainId: 0,
     indexer: 'https://indexer-api.mainnet.autonomys.xyz/v1/xdm',
     explorers: {
       consensus: 'https://autonomys.subscan.io',
@@ -13,10 +17,14 @@ export const NETWORKS = {
   },
   chronos: {
     name: 'Chronos Testnet',
+    networkId: 'chronos' as const,
     rpc: {
       consensus: 'wss://rpc.chronos.autonomys.xyz/ws',
       autoEvm: 'wss://auto-evm.chronos.autonomys.xyz/ws',
     },
+    evmRpcHttp: 'https://auto-evm.chronos.autonomys.xyz/ws',
+    evmChainId: 8700,
+    domainId: 0,
     indexer: 'https://indexer-api.chronos.autonomys.xyz/v1/xdm',
     explorers: {
       consensus: 'https://autonomys-chronos.subscan.io',
