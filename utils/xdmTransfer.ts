@@ -1,4 +1,4 @@
-import { activate, disconnect, ai3ToShannons } from '@autonomys/auto-utils';
+import { activate, disconnect, ai3ToShannons, signAndSendTx } from '@autonomys/auto-utils';
 import { transporterTransfer, transferToConsensus } from '@autonomys/auto-xdm';
 import type { InjectedExtension } from '@polkadot/extension-inject/types';
 import { decodeAddress } from '@polkadot/keyring';
@@ -18,8 +18,8 @@ export interface TransferResult {
 
 /**
  * Execute a Consensus → Auto EVM transfer using the Substrate wallet.
- * Uses tx.signAndSend() directly (rather than the SDK's signAndSendTx) so that
- * wallet rejections properly reject the promise instead of hanging forever.
+ * Uses signAndSendTx from @autonomys/auto-utils (≥1.6.10), which correctly
+ * handles wallet rejection, subscription cleanup, and success detection.
  */
 export async function transferConsensusToEvm(params: {
   network: NetworkType;
@@ -41,62 +41,11 @@ export async function transferConsensusToEvm(params: {
       amount,
     );
 
-    // We use two racing promises:
-    // 1. The status-callback promise that resolves/rejects based on tx lifecycle
-    // 2. The signAndSend outer promise that rejects if the wallet denies signing
-    //
-    // Some wallet extensions (e.g. SubWallet) reject the outer promise while
-    // others may throw synchronously or fire the callback with an error.
-    // Racing both + wrapping in try/catch covers all paths.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await new Promise<TransferResult>((resolve, reject) => {
-      let settled = false;
-      let unsub: (() => void) | undefined;
+    const result = await signAndSendTx(senderAddress, tx, { signer: injector.signer as any });
 
-      const cleanup = () => {
-        if (unsub) { try { unsub(); } catch { /* ignore */ } }
-      };
-      const safeResolve = (v: TransferResult) => {
-        if (!settled) { settled = true; cleanup(); resolve(v); }
-      };
-      const safeReject = (e: unknown) => {
-        if (!settled) { settled = true; cleanup(); reject(e); }
-      };
-
-      try {
-        const outerPromise = tx.signAndSend(
-          senderAddress,
-          { signer: injector.signer as any },
-          ({ status, txHash, dispatchError }) => {
-            if (dispatchError) {
-              safeReject(new Error(`Transaction failed: ${dispatchError.toString()}`));
-            } else if (status.isInBlock || status.isFinalized) {
-              safeResolve({
-                success: true,
-                txHash: txHash.toHex(),
-              });
-            } else if (status.isDropped || status.isInvalid || status.isRetracted) {
-              safeReject(new Error('Transaction was dropped or invalid.'));
-            }
-          },
-        );
-        // The outer promise resolves to an unsubscribe fn on success,
-        // but rejects if the wallet denies the signing request.
-        if (outerPromise && typeof (outerPromise as any).then === 'function') {
-          (outerPromise as any).then(
-            (fn: unknown) => { if (typeof fn === 'function') unsub = fn as () => void; },
-            safeReject,
-          );
-        }
-      } catch (err) {
-        // Synchronous throw from signAndSend (some extension implementations)
-        safeReject(err);
-      }
-    });
-
-    return result;
+    return { success: result.success, txHash: result.txHash };
   } finally {
-    // disconnect in background — don't let it block error propagation
     disconnect(api).catch((e) => console.warn('Failed to disconnect API:', e));
   }
 }
