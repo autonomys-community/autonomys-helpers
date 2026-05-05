@@ -11,9 +11,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@autonomys/auto-utils": "^1.6.9",
-    "@autonomys/auto-wallet": "^1.6.9",
-    "@autonomys/auto-xdm": "^1.6.9",
+    "@autonomys/auto-utils": "^1.6.10",
+    "@autonomys/auto-wallet": "^1.6.10",
+    "@autonomys/auto-xdm": "^1.6.10",
     "@polkadot/api": "^15.8.1",
     "bootstrap": "^5.3.3",
     "ethers": "^6.16.0",
