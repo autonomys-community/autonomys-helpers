@@ -6,6 +6,7 @@ import { isAddress as isValidEthersAddress } from 'ethers';
 import type { JsonRpcSigner, BrowserProvider } from 'ethers';
 import type { NetworkType } from '../config/networks';
 import { NETWORKS } from '../config/networks';
+import { getEvmFeeOverrides } from './evmFees';
 
 export type TransferDirection = 'consensus-to-evm' | 'evm-to-consensus';
 
@@ -62,14 +63,12 @@ export async function transferEvmToConsensus(params: {
   const { signer, recipientSs58Address, amountAi3 } = params;
   const amount = ai3ToShannons(amountAi3);
 
-  // Fetch current fee data so the tx meets the block base fee
-  const provider = signer.provider;
-  const feeData = await provider.getFeeData();
-
-  const result = await transferToConsensus(signer, recipientSs58Address, amount, {
-    maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-    maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-  });
+  const result = await transferToConsensus(
+    signer,
+    recipientSs58Address,
+    amount,
+    await getEvmFeeOverrides(signer),
+  );
   return {
     success: result.success,
     txHash: result.transactionHash,

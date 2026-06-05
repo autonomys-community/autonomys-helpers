@@ -7,7 +7,8 @@ import EvmWalletConnect from '../../components/wallet/EvmWalletConnect';
 import SendForm from '../../components/SendForm';
 import { useSubstrateWallet } from '../../components/wallet/useSubstrateWallet';
 import { useEvmWallet } from '../../components/wallet/useEvmWallet';
-import { NETWORKS, type NetworkType } from '../../config/networks';
+import { NETWORKS, getEvmChainDisplayName, type NetworkType } from '../../config/networks';
+import { describeWalletError } from '../../utils/walletErrors';
 import {
   transferConsensusToEvm,
   transferEvmToConsensus,
@@ -40,7 +41,7 @@ export default function SendPage() {
   const handleSwitchEvmChain = useCallback(async () => {
     await evmWallet.switchChain(
       networkConfig.evmChainId,
-      `Autonomys ${networkConfig.name} Auto EVM`,
+      getEvmChainDisplayName(selectedNetwork),
       networkConfig.evmRpcHttp,
     );
   }, [evmWallet, networkConfig]);
@@ -77,13 +78,7 @@ export default function SendPage() {
       router.push(`/xdm/transfers?search=${encodeURIComponent(searchAddr)}&network=${selectedNetwork}`);
     } catch (err) {
       console.error('Transfer failed:', err);
-      const raw = err instanceof Error ? err.message : String(err);
-      // Detect user rejection from wallet
-      const isRejected = /user rejected|cancelled|action_rejected|rejected by user/i.test(raw);
-      const message = isRejected
-        ? 'Transaction was rejected in your wallet.'
-        : raw || 'Transfer failed. Please try again.';
-      setSubmitError(message);
+      setSubmitError(describeWalletError(err, 'Transfer failed. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +145,7 @@ export default function SendPage() {
             address={evmWallet.address}
             chainId={evmWallet.chainId}
             expectedChainId={networkConfig.evmChainId}
-            expectedChainName={`Autonomys ${networkConfig.name} Auto EVM`}
+            expectedChainName={getEvmChainDisplayName(selectedNetwork)}
             error={evmWallet.error}
             isMetaMaskInstalled={evmWallet.isMetaMaskInstalled}
             onConnect={evmWallet.connect}
