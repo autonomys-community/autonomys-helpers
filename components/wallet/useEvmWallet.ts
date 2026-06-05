@@ -39,9 +39,15 @@ export function useEvmWallet(): EvmWalletState {
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Resolved after mount so server-rendered HTML doesn't disagree with client.
+  const [isMetaMaskInstalled, setIsMetaMaskInstalled] = useState(false);
   const mountedRef = useRef(true);
 
-  const isMetaMaskInstalled = typeof window !== 'undefined' && !!window.ethereum;
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      setIsMetaMaskInstalled(true);
+    }
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
