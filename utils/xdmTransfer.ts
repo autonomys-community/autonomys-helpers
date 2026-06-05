@@ -18,8 +18,6 @@ export interface TransferResult {
 
 /**
  * Execute a Consensus → Auto EVM transfer using the Substrate wallet.
- * Uses signAndSendTx from @autonomys/auto-utils (≥1.6.10), which correctly
- * handles wallet rejection, subscription cleanup, and success detection.
  */
 export async function transferConsensusToEvm(params: {
   network: NetworkType;
