@@ -1,12 +1,22 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Alert, Button, ButtonGroup, Card, Form, Modal, Spinner, ToggleButton } from 'react-bootstrap';
+import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import NetworkSelector from '../components/NetworkSelector';
 import EvmWalletConnect from '../components/wallet/EvmWalletConnect';
 import { useEvmWallet } from '../components/wallet/useEvmWallet';
 import { NETWORKS, getEvmChainDisplayName, type NetworkType } from '../config/networks';
-import { getEvmBalance } from '../utils/xdmTransfer';
-import { addWai3ToWallet, getWai3Balance, unwrapWai3, wrapAi3 } from '../utils/wai3';
+import {
+  addWai3ToWallet,
+  formatShannonsAi3,
+  getWai3BalanceShannons,
+  unwrapWai3,
+  wrapAi3,
+} from '../utils/wai3';
 import { describeWalletError } from '../utils/walletErrors';
+
+// Leave this much native AI3 in the wallet to cover gas when the user clicks
+// MAX on a wrap. 0.01 AI3 ≈ enough for several txs at typical Auto EVM fees.
+const GAS_BUFFER_SHANNONS = ai3ToShannons('0.01');
 
 type WrapDirection = 'wrap' | 'unwrap';
 
@@ -24,8 +34,10 @@ export default function WrapPage() {
   const [selectedNetwork, setSelectedNetwork] = useState<NetworkType>('mainnet');
   const [direction, setDirection] = useState<WrapDirection>('wrap');
   const [amount, setAmount] = useState('');
-  const [nativeBalance, setNativeBalance] = useState<string | null>(null);
-  const [wai3Balance, setWai3Balance] = useState<string | null>(null);
+  // Balances tracked in Shannons (BigInt) for exact arithmetic. Formatted
+  // for display with formatShannonsAi3.
+  const [nativeShannons, setNativeShannons] = useState<bigint | null>(null);
+  const [wai3Shannons, setWai3Shannons] = useState<bigint | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -52,8 +64,8 @@ export default function WrapPage() {
   // Refresh balances when address, network or chain changes
   useEffect(() => {
     if (!evmWallet.address || !evmWallet.provider || isWrongChain) {
-      setNativeBalance(null);
-      setWai3Balance(null);
+      setNativeShannons(null);
+      setWai3Shannons(null);
       return;
     }
     let cancelled = false;
@@ -61,20 +73,20 @@ export default function WrapPage() {
     (async () => {
       try {
         const [native, wai3] = await Promise.all([
-          getEvmBalance(evmWallet.provider!, evmWallet.address!),
-          getWai3Balance(selectedNetwork, evmWallet.provider!, evmWallet.address!),
+          evmWallet.provider!.getBalance(evmWallet.address!),
+          getWai3BalanceShannons(selectedNetwork, evmWallet.provider!, evmWallet.address!),
         ]);
         if (!cancelled) {
-          setNativeBalance(native);
-          setWai3Balance(wai3);
+          setNativeShannons(native);
+          setWai3Shannons(wai3);
         }
       } catch (err) {
         console.error('Failed to fetch balances:', err);
         // Clear stale balances so validation and MAX don't operate on
         // figures that no longer match the current address / network.
         if (!cancelled) {
-          setNativeBalance(null);
-          setWai3Balance(null);
+          setNativeShannons(null);
+          setWai3Shannons(null);
         }
       } finally {
         if (!cancelled) setBalanceLoading(false);
@@ -103,7 +115,7 @@ export default function WrapPage() {
     setShowConfirm(false);
   }, [evmWallet.chainId, evmWallet.address]);
 
-  const sourceBalance = isWrap ? nativeBalance : wai3Balance;
+  const sourceShannons = isWrap ? nativeShannons : wai3Shannons;
   const sourceSymbol = isWrap ? nativeSymbol : wrappedSymbol;
   const targetSymbol = isWrap ? wrappedSymbol : nativeSymbol;
 
@@ -113,25 +125,40 @@ export default function WrapPage() {
     if (isNaN(num) || num <= 0) return 'Amount must be greater than 0.';
     // We must know the source balance before allowing submission; null
     // means it's still loading or the last fetch failed.
-    if (sourceBalance === null) {
+    if (sourceShannons === null) {
       return `${sourceSymbol} balance not loaded yet. Please wait or reconnect.`;
     }
-    if (num > parseFloat(sourceBalance)) {
+    // Compare in Shannons (BigInt) so we don't let through amounts that
+    // round up to within balance but actually exceed it. ai3ToShannons may
+    // throw on out-of-bounds input (e.g. >18 decimals); catch that as a
+    // validation error rather than letting the chain reject it.
+    let amountShannons: bigint;
+    try {
+      amountShannons = ai3ToShannons(amount.trim(), { rounding: 'truncate' });
+    } catch {
+      return 'Amount has too many decimal places. Please use up to 18.';
+    }
+    if (amountShannons <= BigInt(0)) return 'Amount must be greater than 0.';
+    if (amountShannons > sourceShannons) {
       return `Insufficient ${sourceSymbol} balance.`;
     }
     return null;
-  }, [amount, sourceBalance, sourceSymbol]);
+  }, [amount, sourceShannons, sourceSymbol]);
 
   const handleSetMax = useCallback(() => {
-    if (sourceBalance === null) return;
+    if (sourceShannons === null) return;
     if (isWrap) {
-      // leave a small buffer for gas
-      const max = Math.max(0, parseFloat(sourceBalance) - 0.01);
-      setAmount(max > 0 ? max.toFixed(4) : '0');
+      // Wrap consumes native AI3 for gas, so leave a buffer.
+      const max = sourceShannons > GAS_BUFFER_SHANNONS
+        ? sourceShannons - GAS_BUFFER_SHANNONS
+        : BigInt(0);
+      setAmount(max > BigInt(0) ? shannonsToAi3(max) : '0');
     } else {
-      setAmount(sourceBalance);
+      // Unwrap doesn't move native AI3, so the user can unwrap the full
+      // WAI3 balance.
+      setAmount(shannonsToAi3(sourceShannons));
     }
-  }, [sourceBalance, isWrap]);
+  }, [sourceShannons, isWrap]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -376,13 +403,13 @@ export default function WrapPage() {
                 <div className="d-flex justify-content-between">
                   <span className="text-muted">Native {nativeSymbol} balance:</span>
                   <span className="font-monospace">
-                    {balanceLoading ? <Spinner size="sm" animation="border" /> : (nativeBalance ?? '-')}
+                    {balanceLoading ? <Spinner size="sm" animation="border" /> : (nativeShannons !== null ? formatShannonsAi3(nativeShannons) : '-')}
                   </span>
                 </div>
                 <div className="d-flex justify-content-between">
                   <span className="text-muted">{wrappedSymbol} balance:</span>
                   <span className="font-monospace">
-                    {balanceLoading ? <Spinner size="sm" animation="border" /> : (wai3Balance ?? '-')}
+                    {balanceLoading ? <Spinner size="sm" animation="border" /> : (wai3Shannons !== null ? formatShannonsAi3(wai3Shannons) : '-')}
                   </span>
                 </div>
               </div>
@@ -410,7 +437,7 @@ export default function WrapPage() {
                     variant="outline-secondary"
                     size="sm"
                     onClick={handleSetMax}
-                    disabled={sourceBalance === null || isSubmitting}
+                    disabled={sourceShannons === null || isSubmitting}
                     className="flex-shrink-0"
                   >
                     MAX

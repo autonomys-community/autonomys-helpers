@@ -1,5 +1,5 @@
-import { ai3ToShannons } from '@autonomys/auto-utils';
-import { Contract, formatUnits } from 'ethers';
+import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
+import { Contract } from 'ethers';
 import type { JsonRpcSigner, BrowserProvider } from 'ethers';
 import { NETWORKS, type NetworkType } from '../config/networks';
 import { getEvmFeeOverrides } from './evmFees';
@@ -72,18 +72,37 @@ export async function unwrapWai3(params: {
 }
 
 /**
- * Read the WAI3 balance of an address, formatted as a 4-decimal AI3 string.
+ * Read the WAI3 balance of an address in Shannons (the smallest unit, 1e-18 AI3).
+ *
+ * Returns the raw bigint so callers can do exact comparisons against
+ * `ai3ToShannons(amount)` and avoid the JS-number rounding that bit us
+ * before (Number(formatUnits(...)).toFixed(4) can round *up*, which made
+ * MAX / insufficient-balance checks let through amounts slightly larger
+ * than the wallet actually holds).
+ *
+ * Use `shannonsToAi3` from @autonomys/auto-utils to format for display.
  */
-export async function getWai3Balance(
+export async function getWai3BalanceShannons(
   network: NetworkType,
   provider: BrowserProvider,
   address: string,
-): Promise<string> {
+): Promise<bigint> {
   const { wai3Address } = NETWORKS[network];
   const contract = new Contract(wai3Address, WAI3_ABI, provider);
-  const raw: bigint = await contract.balanceOf(address);
-  // WAI3 uses 18 decimals (same as native AI3)
-  return Number(formatUnits(raw, 18)).toFixed(4);
+  return await contract.balanceOf(address);
+}
+
+/**
+ * Format a Shannon amount as an AI3 display string truncated to a fixed
+ * number of decimal places. Truncation never inflates the displayed value
+ * above what's actually there, which matters for balances feeding into
+ * MAX and validation.
+ */
+export function formatShannonsAi3(shannons: bigint, decimals = 4): string {
+  const precise = shannonsToAi3(shannons);
+  const [intPart, fracPart = ''] = precise.split('.');
+  if (decimals === 0) return intPart;
+  return `${intPart}.${fracPart.slice(0, decimals).padEnd(decimals, '0')}`;
 }
 
 export type AddWai3Result =
