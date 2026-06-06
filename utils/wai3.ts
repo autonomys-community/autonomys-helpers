@@ -86,14 +86,28 @@ export async function getWai3Balance(
   return Number(formatUnits(raw, 18)).toFixed(4);
 }
 
+export type AddWai3Result =
+  | { ok: true }
+  | { ok: false; reason: 'no-wallet' | 'wrong-chain' | 'declined' };
+
 /**
  * Ask the connected wallet (MetaMask) to track WAI3 as an ERC-20.
- * Returns true if the user added the token, false if they declined or it failed.
+ *
+ * wallet_watchAsset registers the address against the wallet's *current*
+ * chain — there's no way to specify which chain the token belongs to. So
+ * we verify the wallet is on the expected Auto EVM chain before issuing
+ * the request; otherwise the user ends up with e.g. the mainnet WAI3
+ * address showing up as a token on Chronos.
  */
-export async function addWai3ToWallet(network: NetworkType): Promise<boolean> {
-  if (typeof window === 'undefined' || !window.ethereum) return false;
-  const { wai3Address, nativeSymbol } = NETWORKS[network];
+export async function addWai3ToWallet(network: NetworkType): Promise<AddWai3Result> {
+  if (typeof window === 'undefined' || !window.ethereum) return { ok: false, reason: 'no-wallet' };
+  const { wai3Address, nativeSymbol, evmChainId } = NETWORKS[network];
   try {
+    const walletChainHex = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+    const walletChainId = parseInt(walletChainHex, 16);
+    if (walletChainId !== evmChainId) {
+      return { ok: false, reason: 'wrong-chain' };
+    }
     const result = await window.ethereum.request({
       method: 'wallet_watchAsset',
       // wallet_watchAsset expects an object, not an array — MetaMask accepts both
@@ -107,8 +121,8 @@ export async function addWai3ToWallet(network: NetworkType): Promise<boolean> {
         },
       } as unknown as unknown[],
     });
-    return Boolean(result);
+    return result ? { ok: true } : { ok: false, reason: 'declined' };
   } catch {
-    return false;
+    return { ok: false, reason: 'declined' };
   }
 }

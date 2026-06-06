@@ -205,13 +205,19 @@ export default function WrapPage() {
 
   const handleAddToken = useCallback(async () => {
     setAddTokenStatus(null);
-    const ok = await addWai3ToWallet(selectedNetwork);
-    setAddTokenStatus(
-      ok
-        ? `${wrappedSymbol} was added to your wallet.`
-        : `Could not add ${wrappedSymbol} - your wallet may not support this, or you declined.`,
-    );
-  }, [selectedNetwork, wrappedSymbol]);
+    const result = await addWai3ToWallet(selectedNetwork);
+    if (result.ok) {
+      setAddTokenStatus(`${wrappedSymbol} was added to your wallet.`);
+    } else if (result.reason === 'wrong-chain') {
+      setAddTokenStatus(
+        `Switch your wallet to ${networkConfig.name} Auto EVM (chain ${networkConfig.evmChainId}) before adding ${wrappedSymbol}.`,
+      );
+    } else if (result.reason === 'no-wallet') {
+      setAddTokenStatus('No EVM wallet detected.');
+    } else {
+      setAddTokenStatus(`Could not add ${wrappedSymbol} - your wallet may not support this, or you declined.`);
+    }
+  }, [selectedNetwork, wrappedSymbol, networkConfig.name, networkConfig.evmChainId]);
 
   const explorerBase = networkConfig.explorers.autoEvm;
   const contractExplorerUrl = `${explorerBase}/address/${networkConfig.wai3Address}`;
@@ -271,7 +277,19 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddToken}
-              disabled={!evmWallet.isMetaMaskInstalled || isSubmitting}
+              // Disable when the wallet isn't on the matching chain: otherwise
+              // wallet_watchAsset would register this network's contract
+              // address against whatever chain the wallet is currently on.
+              disabled={
+                !evmWallet.isMetaMaskInstalled
+                || isSubmitting
+                || evmWallet.chainId !== networkConfig.evmChainId
+              }
+              title={
+                evmWallet.chainId !== networkConfig.evmChainId
+                  ? `Switch your wallet to ${networkConfig.name} Auto EVM first`
+                  : undefined
+              }
             >
               Add {wrappedSymbol} token to wallet
             </Button>
