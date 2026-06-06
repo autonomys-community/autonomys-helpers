@@ -5,9 +5,10 @@ import { NETWORKS, NetworkType } from '../config/networks';
 interface NetworkSelectorProps {
   selectedNetwork: NetworkType;
   onChange: (network: NetworkType) => void;
+  disabled?: boolean;
 }
 
-const NetworkSelector: React.FC<NetworkSelectorProps> = ({ selectedNetwork, onChange }) => {
+const NetworkSelector: React.FC<NetworkSelectorProps> = ({ selectedNetwork, onChange, disabled = false }) => {
   return (
     <div className="mb-4">
       <label className="form-label fw-bold">Select Network:</label>
@@ -21,6 +22,7 @@ const NetworkSelector: React.FC<NetworkSelectorProps> = ({ selectedNetwork, onCh
             name="networkToggle"
             value={key}
             checked={selectedNetwork === key}
+            disabled={disabled}
             onChange={() => onChange(key)}
           >
             {NETWORKS[key].name}

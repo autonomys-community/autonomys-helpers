@@ -95,13 +95,13 @@ export default function WrapPage() {
     setShowConfirm(false);
   }, [direction, selectedNetwork]);
 
-  // Close the confirm modal if the wallet's chain changes while it's open,
-  // so a user can't open it on the right chain, switch networks in the
-  // wallet, then submit a wrap/unwrap against the UI network with a signer
-  // on a different chain.
+  // Close the confirm modal if the wallet's chain or account changes while
+  // it's open. Otherwise a user could open the modal on the right chain /
+  // account, switch in the wallet, then submit a wrap/unwrap against the
+  // UI network with a signer on a different chain or account.
   useEffect(() => {
     setShowConfirm(false);
-  }, [evmWallet.chainId]);
+  }, [evmWallet.chainId, evmWallet.address]);
 
   const sourceBalance = isWrap ? nativeBalance : wai3Balance;
   const sourceSymbol = isWrap ? nativeSymbol : wrappedSymbol;
@@ -111,7 +111,12 @@ export default function WrapPage() {
     if (!amount.trim()) return 'Amount is required.';
     const num = parseFloat(amount);
     if (isNaN(num) || num <= 0) return 'Amount must be greater than 0.';
-    if (sourceBalance !== null && num > parseFloat(sourceBalance)) {
+    // We must know the source balance before allowing submission; null
+    // means it's still loading or the last fetch failed.
+    if (sourceBalance === null) {
+      return `${sourceSymbol} balance not loaded yet. Please wait or reconnect.`;
+    }
+    if (num > parseFloat(sourceBalance)) {
       return `Insufficient ${sourceSymbol} balance.`;
     }
     return null;
@@ -141,9 +146,28 @@ export default function WrapPage() {
   }, [validate]);
 
   const handleConfirm = useCallback(async () => {
+    // Guard against double-click races: setIsSubmitting(true) below isn't
+    // visible to a synchronous second click, so check the flag directly.
+    if (isSubmitting) return;
     setShowConfirm(false);
     if (!evmWallet.signer) {
       setSubmitError('EVM wallet not connected.');
+      return;
+    }
+    // Re-validate at submit time so a closure captured before the user
+    // changed network / amount / balance can't ship a stale request.
+    const validationErr = validate();
+    if (validationErr) {
+      setSubmitError(validationErr);
+      return;
+    }
+    // Verify the wallet is still on the network we're about to transact
+    // against - chain switches in the wallet are async and the modal-close
+    // effect may race with this submit.
+    if (evmWallet.chainId !== networkConfig.evmChainId) {
+      setSubmitError(
+        `Wallet is on chain ${evmWallet.chainId ?? '?'} but the UI is targeting ${networkConfig.name} (chain ${networkConfig.evmChainId}). Switch your wallet and try again.`,
+      );
       return;
     }
     setIsSubmitting(true);
@@ -169,7 +193,7 @@ export default function WrapPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [evmWallet.signer, isWrap, selectedNetwork, amount]);
+  }, [isSubmitting, evmWallet.signer, evmWallet.chainId, networkConfig.evmChainId, networkConfig.name, isWrap, selectedNetwork, amount, validate]);
 
   const handleAddNetwork = useCallback(async () => {
     await evmWallet.switchChain(
@@ -225,7 +249,7 @@ export default function WrapPage() {
         </Card.Body>
       </Card>
 
-      <NetworkSelector selectedNetwork={selectedNetwork} onChange={setSelectedNetwork} />
+      <NetworkSelector selectedNetwork={selectedNetwork} onChange={setSelectedNetwork} disabled={isSubmitting} />
 
       <Card className="mb-4">
         <Card.Body>
@@ -239,7 +263,7 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddNetwork}
-              disabled={!evmWallet.isMetaMaskInstalled}
+              disabled={!evmWallet.isMetaMaskInstalled || isSubmitting}
             >
               Add {networkConfig.name} Auto EVM (chain {networkConfig.evmChainId})
             </Button>
@@ -247,7 +271,7 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddToken}
-              disabled={!evmWallet.isMetaMaskInstalled}
+              disabled={!evmWallet.isMetaMaskInstalled || isSubmitting}
             >
               Add {wrappedSymbol} token to wallet
             </Button>
@@ -294,6 +318,7 @@ export default function WrapPage() {
               name="wrapDirToggle"
               value={d}
               checked={direction === d}
+              disabled={isSubmitting}
               onChange={() => setDirection(d)}
             >
               {directionLabel(d, nativeSymbol, wrappedSymbol)}
@@ -459,8 +484,8 @@ export default function WrapPage() {
           <Button variant="outline-secondary" onClick={() => setShowConfirm(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleConfirm}>
-            Confirm in Wallet
+          <Button variant="primary" onClick={handleConfirm} disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting…' : 'Confirm in Wallet'}
           </Button>
         </Modal.Footer>
       </Modal>
