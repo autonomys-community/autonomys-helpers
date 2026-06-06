@@ -77,13 +77,16 @@ export default function WrapPage() {
     return () => { cancelled = true; };
   }, [evmWallet.address, evmWallet.provider, evmWallet.chainId, selectedNetwork, isWrongChain, txHash]);
 
-  // Reset form on direction/network change
+  // Reset form on direction/network change. Closing the confirm modal here
+  // matters: otherwise it can survive a network switch and then submit the
+  // (now stale) amount against the newly-selected network's contract.
   useEffect(() => {
     setAmount('');
     setValidationError(null);
     setSubmitError(null);
     setTxHash(null);
     setAddTokenStatus(null);
+    setShowConfirm(false);
   }, [direction, selectedNetwork]);
 
   const sourceBalance = isWrap ? nativeBalance : wai3Balance;
@@ -136,8 +139,16 @@ export default function WrapPage() {
       const result = isWrap
         ? await wrapAi3({ network: selectedNetwork, signer: evmWallet.signer, amountAi3: amount.trim() })
         : await unwrapWai3({ network: selectedNetwork, signer: evmWallet.signer, amountAi3: amount.trim() });
+      // result.success mirrors receipt.status === 1. A mined-but-reverted tx
+      // has success === false; still surface its hash so the user can inspect
+      // it on the explorer, but flag the failure rather than showing a
+      // green "submitted" confirmation.
       setTxHash(result.txHash);
-      setAmount('');
+      if (result.success) {
+        setAmount('');
+      } else {
+        setSubmitError('Transaction was mined but reverted on-chain. Inspect it on the explorer for details.');
+      }
     } catch (err) {
       console.error('Transaction failed:', err);
       setSubmitError(describeWalletError(err));
@@ -357,9 +368,19 @@ export default function WrapPage() {
                 <Alert variant="warning" className="py-2 small">{validationError}</Alert>
               )}
               {submitError && (
-                <Alert variant="danger" className="py-2 small">{submitError}</Alert>
+                <Alert variant="danger" className="py-2 small">
+                  {submitError}
+                  {txExplorerUrl && (
+                    <>
+                      {' '}
+                      <a href={txExplorerUrl} target="_blank" rel="noopener noreferrer">
+                        View on explorer
+                      </a>
+                    </>
+                  )}
+                </Alert>
               )}
-              {txHash && txExplorerUrl && (
+              {!submitError && txHash && txExplorerUrl && (
                 <Alert variant="success" className="py-2 small">
                   Transaction submitted!{' '}
                   <a href={txExplorerUrl} target="_blank" rel="noopener noreferrer">
