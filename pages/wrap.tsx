@@ -70,6 +70,12 @@ export default function WrapPage() {
         }
       } catch (err) {
         console.error('Failed to fetch balances:', err);
+        // Clear stale balances so validation and MAX don't operate on
+        // figures that no longer match the current address / network.
+        if (!cancelled) {
+          setNativeBalance(null);
+          setWai3Balance(null);
+        }
       } finally {
         if (!cancelled) setBalanceLoading(false);
       }
@@ -88,6 +94,14 @@ export default function WrapPage() {
     setAddTokenStatus(null);
     setShowConfirm(false);
   }, [direction, selectedNetwork]);
+
+  // Close the confirm modal if the wallet's chain changes while it's open,
+  // so a user can't open it on the right chain, switch networks in the
+  // wallet, then submit a wrap/unwrap against the UI network with a signer
+  // on a different chain.
+  useEffect(() => {
+    setShowConfirm(false);
+  }, [evmWallet.chainId]);
 
   const sourceBalance = isWrap ? nativeBalance : wai3Balance;
   const sourceSymbol = isWrap ? nativeSymbol : wrappedSymbol;
