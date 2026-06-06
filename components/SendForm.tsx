@@ -205,6 +205,8 @@ const SendForm: React.FC<SendFormProps> = ({
                     setAmount(e.target.value);
                     setValidationError(null);
                   }}
+                  // Prevent the mouse wheel from changing the amount when the input is focused.
+                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
                   disabled={isSubmitting}
                 />
                 <Button
