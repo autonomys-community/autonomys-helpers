@@ -1,5 +1,8 @@
 import React from 'react';
+import Image from 'next/image';
 import { Button, Spinner, Alert } from 'react-bootstrap';
+import type { Eip6963ProviderDetail } from './eip6963';
+import { LEGACY_RDNS } from './useEvmWallet';
 
 interface EvmWalletConnectProps {
   isConnected: boolean;
@@ -9,8 +12,11 @@ interface EvmWalletConnectProps {
   expectedChainId: number;
   expectedChainName: string;
   error: string | null;
-  isMetaMaskInstalled: boolean;
-  onConnect: () => Promise<void>;
+  discoveredWallets: Eip6963ProviderDetail[];
+  hasDetected: boolean;
+  hasLegacyProvider: boolean;
+  connectedRdns: string | null;
+  onConnect: (rdns?: string) => Promise<void>;
   onDisconnect: () => void;
   onSwitchChain: () => Promise<void>;
   onClearError: () => void;
@@ -28,7 +34,10 @@ const EvmWalletConnect: React.FC<EvmWalletConnectProps> = ({
   expectedChainId,
   expectedChainName,
   error,
-  isMetaMaskInstalled,
+  discoveredWallets,
+  hasDetected,
+  hasLegacyProvider,
+  connectedRdns,
   onConnect,
   onDisconnect,
   onSwitchChain,
@@ -37,12 +46,25 @@ const EvmWalletConnect: React.FC<EvmWalletConnectProps> = ({
   const isWrongChain = isConnected && chainId !== null && chainId !== expectedChainId;
 
   if (isConnected && address) {
+    const connectedWallet = discoveredWallets.find((w) => w.info.rdns === connectedRdns);
     return (
       <div>
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
           <span className={`badge ${isWrongChain ? 'bg-warning text-dark' : 'bg-success'}`}>
             {isWrongChain ? 'Wrong Network' : 'Connected'}
           </span>
+          {connectedWallet && (
+            <span className="d-inline-flex align-items-center gap-1 small text-muted">
+              <Image
+                src={connectedWallet.info.icon}
+                alt=""
+                width={16}
+                height={16}
+                unoptimized
+              />
+              {connectedWallet.info.name}
+            </span>
+          )}
           <span className="small" style={{ fontFamily: 'monospace' }}>
             {shortenEvmAddress(address)}
           </span>
@@ -71,6 +93,12 @@ const EvmWalletConnect: React.FC<EvmWalletConnectProps> = ({
     );
   }
 
+  // Connect view: render one button per discovered wallet, plus a legacy
+  // fallback button when window.ethereum is present but no EIP-6963
+  // announcement was made.
+  const showLegacyFallback = hasLegacyProvider && discoveredWallets.length === 0;
+  const noWallets = hasDetected && discoveredWallets.length === 0 && !hasLegacyProvider;
+
   return (
     <div>
       {error && (
@@ -84,28 +112,49 @@ const EvmWalletConnect: React.FC<EvmWalletConnectProps> = ({
           <Spinner animation="border" size="sm" />
           <span className="small">Connecting wallet…</span>
         </div>
-      ) : isMetaMaskInstalled ? (
-        <Button
-          variant="outline-primary"
-          size="sm"
-          onClick={onConnect}
-          className="d-flex align-items-center gap-1"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M22.5 4.5L13.5 1.5L4.5 4.5L1.5 12L4.5 19.5L13.5 22.5L22.5 19.5L25.5 12L22.5 4.5Z" fill="#E2761B" stroke="#E2761B" strokeWidth="0.5"/>
-          </svg>
-          Connect MetaMask
-        </Button>
-      ) : (
+      ) : noWallets ? (
         <div className="small text-muted">
-          MetaMask is not installed.{' '}
-          <a
-            href="https://metamask.io/download/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Install MetaMask
-          </a>
+          No EVM wallet detected. Install one to continue —{' '}
+          <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer">MetaMask</a>,{' '}
+          <a href="https://rabby.io/" target="_blank" rel="noopener noreferrer">Rabby</a>,{' '}
+          or any browser wallet that supports EIP-6963.
+        </div>
+      ) : (
+        <div className="d-flex flex-column align-items-stretch gap-2" style={{ maxWidth: 320 }}>
+          {discoveredWallets.map((w) => (
+            <Button
+              key={w.info.rdns}
+              variant="outline-primary"
+              size="sm"
+              onClick={() => onConnect(w.info.rdns)}
+              className="d-flex align-items-center gap-2 text-start"
+            >
+              <Image
+                src={w.info.icon}
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+              />
+              <span>Connect {w.info.name}</span>
+            </Button>
+          ))}
+          {showLegacyFallback && (
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => onConnect(LEGACY_RDNS)}
+              className="d-flex align-items-center gap-2"
+            >
+              Connect Browser Wallet
+            </Button>
+          )}
+          {!hasDetected && discoveredWallets.length === 0 && (
+            <div className="d-flex align-items-center gap-2 text-muted small">
+              <Spinner animation="border" size="sm" />
+              <span>Detecting wallets…</span>
+            </div>
+          )}
         </div>
       )}
     </div>
