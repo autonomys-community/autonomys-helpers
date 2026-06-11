@@ -84,17 +84,26 @@ export function useEvmWallet(): EvmWalletState {
   // Discover EIP-6963 wallets on mount, plus check for the legacy window.ethereum.
   useEffect(() => {
     const stop = listenForProviders((detail) => {
-      if (mountedRef.current) {
-        setDiscoveredWallets((prev) => [...prev, detail]);
-      }
+      if (!mountedRef.current) return;
+      // Dedupe at the state level too, not just inside the helper: in React
+      // Strict Mode (and any other effect-resubscribe path) the helper's
+      // own Set is fresh while the discoveredWallets state survives, so
+      // wallets re-announcing would otherwise double up here.
+      setDiscoveredWallets((prev) =>
+        prev.some((w) => w.info.rdns === detail.info.rdns) ? prev : [...prev, detail]
+      );
     });
     if (typeof window !== 'undefined' && window.ethereum) {
       setHasLegacyProvider(true);
     }
-    // Give wallets a tick to respond, then mark detection complete.
+    // Give wallets enough time to respond before showing "no wallet
+    // detected". Most extensions announce in well under 100ms, but the
+    // 50ms we used originally was tight enough to occasionally flash the
+    // no-wallet message before later announcements arrived. The listener
+    // stays subscribed past this, so late announcements still appear.
     const t = setTimeout(() => {
       if (mountedRef.current) setHasDetected(true);
-    }, 50);
+    }, 300);
     return () => {
       stop();
       clearTimeout(t);
@@ -102,17 +111,23 @@ export function useEvmWallet(): EvmWalletState {
   }, []);
 
   const connect = useCallback(async (rdns?: string) => {
-    // Pick the raw provider: a discovered one by rdns, or window.ethereum.
+    // Pick the raw provider:
+    //   - If a specific rdns was requested, use that exact wallet or fail.
+    //     Silently falling back to window.ethereum would mean the user
+    //     authorises and signs with a different extension than the one
+    //     they clicked on, which on a multi-wallet setup is a real footgun.
+    //   - If no rdns (or the legacy sentinel) was passed, use window.ethereum.
     let raw: Eip1193Provider | undefined;
     let chosenRdns: string | null = null;
     if (rdns && rdns !== LEGACY_RDNS) {
       const match = discoveredWallets.find((w) => w.info.rdns === rdns);
-      if (match) {
-        raw = match.provider;
-        chosenRdns = rdns;
+      if (!match) {
+        setError(`Wallet "${rdns}" is no longer available. Please pick another from the list.`);
+        return;
       }
-    }
-    if (!raw) {
+      raw = match.provider;
+      chosenRdns = rdns;
+    } else {
       raw = window.ethereum;
       chosenRdns = window.ethereum ? LEGACY_RDNS : null;
     }
