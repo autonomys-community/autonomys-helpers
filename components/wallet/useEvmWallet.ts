@@ -97,13 +97,16 @@ export function useEvmWallet(): EvmWalletState {
       setHasLegacyProvider(true);
     }
     // Give wallets enough time to respond before showing "no wallet
-    // detected". Most extensions announce in well under 100ms, but the
-    // 50ms we used originally was tight enough to occasionally flash the
-    // no-wallet message before later announcements arrived. The listener
-    // stays subscribed past this, so late announcements still appear.
+    // detected". Most extensions announce in well under 100ms, but a
+    // longer-than-strictly-necessary timeout makes the "no wallet"
+    // message essentially flash-free for late EIP-6963 announcements
+    // (cold-started extensions, lazy-loading wallets). The listener
+    // stays subscribed past this, so wallets that arrive even later
+    // still appear in the picker - this timer only gates the "no
+    // wallet" message, not discovery itself.
     const t = setTimeout(() => {
       if (mountedRef.current) setHasDetected(true);
-    }, 300);
+    }, 1500);
     return () => {
       stop();
       clearTimeout(t);

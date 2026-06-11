@@ -52,9 +52,6 @@ export default function WrapPage() {
   const wrappedSymbol = networkConfig.wrappedSymbol;
   const isWrap = direction === 'wrap';
   const isWrongChain = evmWallet.isConnected && evmWallet.chainId !== networkConfig.evmChainId;
-  // True iff at least one EVM provider (EIP-6963-announced or legacy
-  // window.ethereum) is available for connecting / chain-switching.
-  const hasAnyEvmWallet = evmWallet.discoveredWallets.length > 0 || evmWallet.hasLegacyProvider;
 
   const handleSwitchEvmChain = useCallback(async () => {
     await evmWallet.switchChain(
@@ -299,7 +296,13 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddNetwork}
-              disabled={!hasAnyEvmWallet || isSubmitting}
+              // Require an active connection: switchChain routes through
+              // the connected wallet's raw provider, so pre-connect we
+              // wouldn't know which extension to add the network to on
+              // a multi-wallet setup (and on EIP-6963-only wallets with
+              // no window.ethereum the call would silently no-op).
+              disabled={!evmWallet.isConnected || isSubmitting}
+              title={!evmWallet.isConnected ? 'Connect a wallet below first' : undefined}
             >
               Add {networkConfig.name} Auto EVM (chain {networkConfig.evmChainId})
             </Button>
@@ -307,16 +310,20 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddToken}
-              // Disable when the wallet isn't on the matching chain: otherwise
-              // wallet_watchAsset would register this network's contract
-              // address against whatever chain the wallet is currently on.
+              // Requires an active connection (so addWai3ToWallet can
+              // route through the picked wallet) AND the wallet being on
+              // the matching chain (otherwise wallet_watchAsset would
+              // register this network's contract address against
+              // whatever chain the wallet is currently on).
               disabled={
-                !hasAnyEvmWallet
+                !evmWallet.isConnected
                 || isSubmitting
                 || evmWallet.chainId !== networkConfig.evmChainId
               }
               title={
-                evmWallet.chainId !== networkConfig.evmChainId
+                !evmWallet.isConnected
+                  ? 'Connect a wallet below first'
+                  : evmWallet.chainId !== networkConfig.evmChainId
                   ? `Switch your wallet to ${networkConfig.name} Auto EVM first`
                   : undefined
               }
