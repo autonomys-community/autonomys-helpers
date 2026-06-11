@@ -52,6 +52,9 @@ export default function WrapPage() {
   const wrappedSymbol = networkConfig.wrappedSymbol;
   const isWrap = direction === 'wrap';
   const isWrongChain = evmWallet.isConnected && evmWallet.chainId !== networkConfig.evmChainId;
+  // True iff at least one EVM provider (EIP-6963-announced or legacy
+  // window.ethereum) is available for connecting / chain-switching.
+  const hasAnyEvmWallet = evmWallet.discoveredWallets.length > 0 || evmWallet.hasLegacyProvider;
 
   const handleSwitchEvmChain = useCallback(async () => {
     await evmWallet.switchChain(
@@ -232,7 +235,7 @@ export default function WrapPage() {
 
   const handleAddToken = useCallback(async () => {
     setAddTokenStatus(null);
-    const result = await addWai3ToWallet(selectedNetwork);
+    const result = await addWai3ToWallet(selectedNetwork, evmWallet.rawProvider);
     if (result.ok) {
       setAddTokenStatus(`${wrappedSymbol} was added to your wallet.`);
     } else if (result.reason === 'wrong-chain') {
@@ -244,7 +247,7 @@ export default function WrapPage() {
     } else {
       setAddTokenStatus(`Could not add ${wrappedSymbol} - your wallet may not support this, or you declined.`);
     }
-  }, [selectedNetwork, wrappedSymbol, networkConfig.name, networkConfig.evmChainId]);
+  }, [selectedNetwork, wrappedSymbol, networkConfig.name, networkConfig.evmChainId, evmWallet.rawProvider]);
 
   const explorerBase = networkConfig.explorers.autoEvm;
   const contractExplorerUrl = `${explorerBase}/address/${networkConfig.wai3Address}`;
@@ -296,7 +299,7 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddNetwork}
-              disabled={!evmWallet.isMetaMaskInstalled || isSubmitting}
+              disabled={!hasAnyEvmWallet || isSubmitting}
             >
               Add {networkConfig.name} Auto EVM (chain {networkConfig.evmChainId})
             </Button>
@@ -308,7 +311,7 @@ export default function WrapPage() {
               // wallet_watchAsset would register this network's contract
               // address against whatever chain the wallet is currently on.
               disabled={
-                !evmWallet.isMetaMaskInstalled
+                !hasAnyEvmWallet
                 || isSubmitting
                 || evmWallet.chainId !== networkConfig.evmChainId
               }
@@ -343,7 +346,10 @@ export default function WrapPage() {
           expectedChainId={networkConfig.evmChainId}
           expectedChainName={getEvmChainDisplayName(selectedNetwork)}
           error={evmWallet.error}
-          isMetaMaskInstalled={evmWallet.isMetaMaskInstalled}
+          discoveredWallets={evmWallet.discoveredWallets}
+          hasDetected={evmWallet.hasDetected}
+          hasLegacyProvider={evmWallet.hasLegacyProvider}
+          connectedRdns={evmWallet.connectedRdns}
           onConnect={evmWallet.connect}
           onDisconnect={evmWallet.disconnect}
           onSwitchChain={handleSwitchEvmChain}
