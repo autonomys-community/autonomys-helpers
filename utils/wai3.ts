@@ -120,7 +120,7 @@ export type AddWai3Result =
  */
 export async function addWai3ToWallet(network: NetworkType): Promise<AddWai3Result> {
   if (typeof window === 'undefined' || !window.ethereum) return { ok: false, reason: 'no-wallet' };
-  const { wai3Address, nativeSymbol, evmChainId } = NETWORKS[network];
+  const { wai3Address, wrappedSymbol, evmChainId } = NETWORKS[network];
   try {
     const walletChainHex = await window.ethereum.request({ method: 'eth_chainId' }) as string;
     const walletChainId = parseInt(walletChainHex, 16);
@@ -135,7 +135,7 @@ export async function addWai3ToWallet(network: NetworkType): Promise<AddWai3Resu
         type: 'ERC20',
         options: {
           address: wai3Address,
-          symbol: `W${nativeSymbol}`,
+          symbol: wrappedSymbol,
           decimals: 18,
         },
       } as unknown as unknown[],

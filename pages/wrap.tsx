@@ -49,7 +49,7 @@ export default function WrapPage() {
   const evmWallet = useEvmWallet();
   const networkConfig = NETWORKS[selectedNetwork];
   const nativeSymbol = networkConfig.nativeSymbol;
-  const wrappedSymbol = `W${nativeSymbol}`;
+  const wrappedSymbol = networkConfig.wrappedSymbol;
   const isWrap = direction === 'wrap';
   const isWrongChain = evmWallet.isConnected && evmWallet.chainId !== networkConfig.evmChainId;
 

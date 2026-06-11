@@ -15,6 +15,7 @@ export const NETWORKS = {
       autoEvm: 'https://explorer.auto-evm.mainnet.autonomys.xyz',
     },
     nativeSymbol: 'AI3',
+    wrappedSymbol: 'WAI3',
     wai3Address: '0x7ba06C7374566c68495f7e4690093521F6B991bb',
   },
   chronos: {
@@ -33,6 +34,10 @@ export const NETWORKS = {
       autoEvm: 'https://explorer.auto-evm.chronos.autonomys.xyz',
     },
     nativeSymbol: 'tAI3',
+    // The Chronos WAI3 contract reports symbol() = "WAI3" on-chain, not
+    // "WtAI3" - keep this matching what the contract actually returns so
+    // wallet_watchAsset registers a consistent symbol.
+    wrappedSymbol: 'WAI3',
     wai3Address: '0xeAb23556Ec571bA10F4C3C8051d719E58e921caC',
   },
 } as const;
