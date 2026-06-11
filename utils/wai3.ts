@@ -1,6 +1,6 @@
 import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import { Contract } from 'ethers';
-import type { JsonRpcSigner, BrowserProvider } from 'ethers';
+import type { ContractRunner, JsonRpcSigner } from 'ethers';
 import { NETWORKS, type NetworkType } from '../config/networks';
 import { getEvmFeeOverrides } from './evmFees';
 
@@ -84,7 +84,7 @@ export async function unwrapWai3(params: {
  */
 export async function getWai3BalanceShannons(
   network: NetworkType,
-  provider: BrowserProvider,
+  provider: ContractRunner,
   address: string,
 ): Promise<bigint> {
   const { wai3Address } = NETWORKS[network];
@@ -110,24 +110,33 @@ export type AddWai3Result =
   | { ok: false; reason: 'no-wallet' | 'wrong-chain' | 'declined' };
 
 /**
- * Ask the connected wallet (MetaMask) to track WAI3 as an ERC-20.
+ * Ask the connected wallet to track WAI3 as an ERC-20.
  *
  * wallet_watchAsset registers the address against the wallet's *current*
  * chain — there's no way to specify which chain the token belongs to. So
  * we verify the wallet is on the expected Auto EVM chain before issuing
  * the request; otherwise the user ends up with e.g. the mainnet WAI3
  * address showing up as a token on Chronos.
+ *
+ * Pass the raw EIP-1193 provider the user picked at connect time so the
+ * request routes to the right extension on multi-wallet setups. Falls
+ * back to window.ethereum for older wallets that don't implement
+ * EIP-6963.
  */
-export async function addWai3ToWallet(network: NetworkType): Promise<AddWai3Result> {
-  if (typeof window === 'undefined' || !window.ethereum) return { ok: false, reason: 'no-wallet' };
+export async function addWai3ToWallet(
+  network: NetworkType,
+  rawProvider?: { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> } | null,
+): Promise<AddWai3Result> {
+  const target = rawProvider ?? (typeof window !== 'undefined' ? window.ethereum : undefined);
+  if (!target) return { ok: false, reason: 'no-wallet' };
   const { wai3Address, wrappedSymbol, evmChainId } = NETWORKS[network];
   try {
-    const walletChainHex = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+    const walletChainHex = await target.request({ method: 'eth_chainId' }) as string;
     const walletChainId = parseInt(walletChainHex, 16);
     if (walletChainId !== evmChainId) {
       return { ok: false, reason: 'wrong-chain' };
     }
-    const result = await window.ethereum.request({
+    const result = await target.request({
       method: 'wallet_watchAsset',
       // wallet_watchAsset expects an object, not an array — MetaMask accepts both
       // but the EIP-747 shape is a plain object. Cast to the loose params type.

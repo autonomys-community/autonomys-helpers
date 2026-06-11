@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Alert, Button, ButtonGroup, Card, Form, Modal, Spinner, ToggleButton } from 'react-bootstrap';
+import { JsonRpcProvider } from 'ethers';
 import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import NetworkSelector from '../components/NetworkSelector';
 import EvmWalletConnect from '../components/wallet/EvmWalletConnect';
@@ -53,6 +54,18 @@ export default function WrapPage() {
   const isWrap = direction === 'wrap';
   const isWrongChain = evmWallet.isConnected && evmWallet.chainId !== networkConfig.evmChainId;
 
+  // Read balances through a direct JSON-RPC provider, not the wallet's
+  // injected provider. The wallet caches state from its own block tracker
+  // (MetaMask polls every ~4s), so eth_getBalance immediately after
+  // tx.wait() returns can come back with the pre-tx state. Reading
+  // directly from the chain RPC always returns the latest committed
+  // state - and since balance lookups are public, the wallet isn't
+  // needed for them.
+  const readProvider = useMemo(
+    () => new JsonRpcProvider(networkConfig.evmRpcHttp),
+    [networkConfig.evmRpcHttp]
+  );
+
   const handleSwitchEvmChain = useCallback(async () => {
     await evmWallet.switchChain(
       networkConfig.evmChainId,
@@ -61,9 +74,9 @@ export default function WrapPage() {
     );
   }, [evmWallet, networkConfig]);
 
-  // Refresh balances when address, network or chain changes
+  // Refresh balances when address, network, chain, or last-tx changes.
   useEffect(() => {
-    if (!evmWallet.address || !evmWallet.provider || isWrongChain) {
+    if (!evmWallet.address || isWrongChain) {
       setNativeShannons(null);
       setWai3Shannons(null);
       return;
@@ -73,8 +86,8 @@ export default function WrapPage() {
     (async () => {
       try {
         const [native, wai3] = await Promise.all([
-          evmWallet.provider!.getBalance(evmWallet.address!),
-          getWai3BalanceShannons(selectedNetwork, evmWallet.provider!, evmWallet.address!),
+          readProvider.getBalance(evmWallet.address!),
+          getWai3BalanceShannons(selectedNetwork, readProvider, evmWallet.address!),
         ]);
         if (!cancelled) {
           setNativeShannons(native);
@@ -93,7 +106,7 @@ export default function WrapPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [evmWallet.address, evmWallet.provider, evmWallet.chainId, selectedNetwork, isWrongChain, txHash]);
+  }, [evmWallet.address, readProvider, evmWallet.chainId, selectedNetwork, isWrongChain, txHash]);
 
   // Reset form on direction/network change. Closing the confirm modal here
   // matters: otherwise it can survive a network switch and then submit the
@@ -232,7 +245,7 @@ export default function WrapPage() {
 
   const handleAddToken = useCallback(async () => {
     setAddTokenStatus(null);
-    const result = await addWai3ToWallet(selectedNetwork);
+    const result = await addWai3ToWallet(selectedNetwork, evmWallet.rawProvider);
     if (result.ok) {
       setAddTokenStatus(`${wrappedSymbol} was added to your wallet.`);
     } else if (result.reason === 'wrong-chain') {
@@ -244,7 +257,7 @@ export default function WrapPage() {
     } else {
       setAddTokenStatus(`Could not add ${wrappedSymbol} - your wallet may not support this, or you declined.`);
     }
-  }, [selectedNetwork, wrappedSymbol, networkConfig.name, networkConfig.evmChainId]);
+  }, [selectedNetwork, wrappedSymbol, networkConfig.name, networkConfig.evmChainId, evmWallet.rawProvider]);
 
   const explorerBase = networkConfig.explorers.autoEvm;
   const contractExplorerUrl = `${explorerBase}/address/${networkConfig.wai3Address}`;
@@ -296,7 +309,13 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddNetwork}
-              disabled={!evmWallet.isMetaMaskInstalled || isSubmitting}
+              // Require an active connection: switchChain routes through
+              // the connected wallet's raw provider, so pre-connect we
+              // wouldn't know which extension to add the network to on
+              // a multi-wallet setup (and on EIP-6963-only wallets with
+              // no window.ethereum the call would silently no-op).
+              disabled={!evmWallet.isConnected || isSubmitting}
+              title={!evmWallet.isConnected ? 'Connect a wallet below first' : undefined}
             >
               Add {networkConfig.name} Auto EVM (chain {networkConfig.evmChainId})
             </Button>
@@ -304,16 +323,20 @@ export default function WrapPage() {
               variant="outline-primary"
               size="sm"
               onClick={handleAddToken}
-              // Disable when the wallet isn't on the matching chain: otherwise
-              // wallet_watchAsset would register this network's contract
-              // address against whatever chain the wallet is currently on.
+              // Requires an active connection (so addWai3ToWallet can
+              // route through the picked wallet) AND the wallet being on
+              // the matching chain (otherwise wallet_watchAsset would
+              // register this network's contract address against
+              // whatever chain the wallet is currently on).
               disabled={
-                !evmWallet.isMetaMaskInstalled
+                !evmWallet.isConnected
                 || isSubmitting
                 || evmWallet.chainId !== networkConfig.evmChainId
               }
               title={
-                evmWallet.chainId !== networkConfig.evmChainId
+                !evmWallet.isConnected
+                  ? 'Connect a wallet below first'
+                  : evmWallet.chainId !== networkConfig.evmChainId
                   ? `Switch your wallet to ${networkConfig.name} Auto EVM first`
                   : undefined
               }
@@ -343,7 +366,10 @@ export default function WrapPage() {
           expectedChainId={networkConfig.evmChainId}
           expectedChainName={getEvmChainDisplayName(selectedNetwork)}
           error={evmWallet.error}
-          isMetaMaskInstalled={evmWallet.isMetaMaskInstalled}
+          discoveredWallets={evmWallet.discoveredWallets}
+          hasDetected={evmWallet.hasDetected}
+          hasLegacyProvider={evmWallet.hasLegacyProvider}
+          connectedRdns={evmWallet.connectedRdns}
           onConnect={evmWallet.connect}
           onDisconnect={evmWallet.disconnect}
           onSwitchChain={handleSwitchEvmChain}

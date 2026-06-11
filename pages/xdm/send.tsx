@@ -147,7 +147,10 @@ export default function SendPage() {
             expectedChainId={networkConfig.evmChainId}
             expectedChainName={getEvmChainDisplayName(selectedNetwork)}
             error={evmWallet.error}
-            isMetaMaskInstalled={evmWallet.isMetaMaskInstalled}
+            discoveredWallets={evmWallet.discoveredWallets}
+            hasDetected={evmWallet.hasDetected}
+            hasLegacyProvider={evmWallet.hasLegacyProvider}
+            connectedRdns={evmWallet.connectedRdns}
             onConnect={evmWallet.connect}
             onDisconnect={evmWallet.disconnect}
             onSwitchChain={handleSwitchEvmChain}
