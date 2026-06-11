@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Alert, Button, ButtonGroup, Card, Form, Modal, Spinner, ToggleButton } from 'react-bootstrap';
+import { JsonRpcProvider } from 'ethers';
 import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import NetworkSelector from '../components/NetworkSelector';
 import EvmWalletConnect from '../components/wallet/EvmWalletConnect';
@@ -53,6 +54,18 @@ export default function WrapPage() {
   const isWrap = direction === 'wrap';
   const isWrongChain = evmWallet.isConnected && evmWallet.chainId !== networkConfig.evmChainId;
 
+  // Read balances through a direct JSON-RPC provider, not the wallet's
+  // injected provider. The wallet caches state from its own block tracker
+  // (MetaMask polls every ~4s), so eth_getBalance immediately after
+  // tx.wait() returns can come back with the pre-tx state. Reading
+  // directly from the chain RPC always returns the latest committed
+  // state - and since balance lookups are public, the wallet isn't
+  // needed for them.
+  const readProvider = useMemo(
+    () => new JsonRpcProvider(networkConfig.evmRpcHttp),
+    [networkConfig.evmRpcHttp]
+  );
+
   const handleSwitchEvmChain = useCallback(async () => {
     await evmWallet.switchChain(
       networkConfig.evmChainId,
@@ -61,9 +74,9 @@ export default function WrapPage() {
     );
   }, [evmWallet, networkConfig]);
 
-  // Refresh balances when address, network or chain changes
+  // Refresh balances when address, network, chain, or last-tx changes.
   useEffect(() => {
-    if (!evmWallet.address || !evmWallet.provider || isWrongChain) {
+    if (!evmWallet.address || isWrongChain) {
       setNativeShannons(null);
       setWai3Shannons(null);
       return;
@@ -73,8 +86,8 @@ export default function WrapPage() {
     (async () => {
       try {
         const [native, wai3] = await Promise.all([
-          evmWallet.provider!.getBalance(evmWallet.address!),
-          getWai3BalanceShannons(selectedNetwork, evmWallet.provider!, evmWallet.address!),
+          readProvider.getBalance(evmWallet.address!),
+          getWai3BalanceShannons(selectedNetwork, readProvider, evmWallet.address!),
         ]);
         if (!cancelled) {
           setNativeShannons(native);
@@ -93,7 +106,7 @@ export default function WrapPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [evmWallet.address, evmWallet.provider, evmWallet.chainId, selectedNetwork, isWrongChain, txHash]);
+  }, [evmWallet.address, readProvider, evmWallet.chainId, selectedNetwork, isWrongChain, txHash]);
 
   // Reset form on direction/network change. Closing the confirm modal here
   // matters: otherwise it can survive a network switch and then submit the

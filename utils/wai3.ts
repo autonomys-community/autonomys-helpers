@@ -1,6 +1,6 @@
 import { ai3ToShannons, shannonsToAi3 } from '@autonomys/auto-utils';
 import { Contract } from 'ethers';
-import type { JsonRpcSigner, BrowserProvider } from 'ethers';
+import type { ContractRunner, JsonRpcSigner } from 'ethers';
 import { NETWORKS, type NetworkType } from '../config/networks';
 import { getEvmFeeOverrides } from './evmFees';
 
@@ -84,7 +84,7 @@ export async function unwrapWai3(params: {
  */
 export async function getWai3BalanceShannons(
   network: NetworkType,
-  provider: BrowserProvider,
+  provider: ContractRunner,
   address: string,
 ): Promise<bigint> {
   const { wai3Address } = NETWORKS[network];
