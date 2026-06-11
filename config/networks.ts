@@ -14,6 +14,9 @@ export const NETWORKS = {
       consensus: 'https://autonomys.subscan.io',
       autoEvm: 'https://explorer.auto-evm.mainnet.autonomys.xyz',
     },
+    nativeSymbol: 'AI3',
+    wrappedSymbol: 'WAI3',
+    wai3Address: '0x7ba06C7374566c68495f7e4690093521F6B991bb',
   },
   chronos: {
     name: 'Chronos Testnet',
@@ -30,6 +33,12 @@ export const NETWORKS = {
       consensus: 'https://autonomys-chronos.subscan.io',
       autoEvm: 'https://explorer.auto-evm.chronos.autonomys.xyz',
     },
+    nativeSymbol: 'tAI3',
+    // The Chronos WAI3 contract reports symbol() = "WAI3" on-chain, not
+    // "WtAI3" - keep this matching what the contract actually returns so
+    // wallet_watchAsset registers a consistent symbol.
+    wrappedSymbol: 'WAI3',
+    wai3Address: '0xeAb23556Ec571bA10F4C3C8051d719E58e921caC',
   },
 } as const;
 
@@ -73,3 +82,12 @@ export function getBlockExplorerUrl(
 // XDM confirmation depths in domain blocks
 export const CONSENSUS_TO_DOMAIN_DEPTH = 100;
 export const DOMAIN_TO_CONSENSUS_DEPTH = 14_400;
+
+/**
+ * Display name for the Auto EVM chain of a given network, e.g.
+ * "Autonomys Mainnet Auto EVM". Used when adding/switching the chain in a
+ * connected wallet.
+ */
+export function getEvmChainDisplayName(network: NetworkType): string {
+  return `Autonomys ${NETWORKS[network].name} Auto EVM`;
+}
